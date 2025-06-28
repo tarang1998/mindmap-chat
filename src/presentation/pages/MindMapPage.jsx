@@ -68,6 +68,7 @@ const MindMapContent = ({ mindMapId }) => {
         return currentMindMap.getAllNodes().map(node => ({
             id: node.id,
             type: 'custom',
+
             position: node.position,
             selected: node.id === selectedNodeId,// <-- highlight if selected
             data: {
@@ -75,6 +76,10 @@ const MindMapContent = ({ mindMapId }) => {
                 node: node,
                 parentId: node.parentId,
                 children: node.children,
+            },
+            style: {
+                width: node.width,
+                height: node.height
             }
         }));
     }, [currentMindMap, selectedNodeId]);
@@ -129,7 +134,7 @@ const MindMapContent = ({ mindMapId }) => {
 
 
     const onNodeDragStop = useCallback((_, node) => {
-        log.debug("MindMapPage", "Updating store on node drag stop", node.id)
+        log.debug("MindMapPage", "Updating store on node drag stop", node.id, node.position)
         dispatch(updateNode({ nodeId: node.id, updates: { position: node.position } }));
     }, [dispatch]);
 
@@ -309,6 +314,8 @@ const MindMapContent = ({ mindMapId }) => {
             <div style={{ flex: 1, position: 'relative' }} ref={reactFlowWrapper}>
                 {hasValidMindMap ? (
                     <ReactFlow
+                        defaultNodes={nodes}
+                        defaultEdges={edges}
                         nodes={nodes} // array of node objects to display, each with id, position, data
                         edges={edges} // array of edge objects to display, each with id, source, target, 
                         nodeTypes={nodeTypes} // an object mapping node type names to React components

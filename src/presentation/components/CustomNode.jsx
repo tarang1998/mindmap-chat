@@ -1,15 +1,37 @@
 import React, { useState, useRef, memo, useCallback, useEffect } from 'react';
-import { Handle, NodeResizeControl, Position } from '@xyflow/react';
+import { Handle, NodeResizeControl, NodeResizer, Position } from '@xyflow/react';
 import { useAppDispatch } from '../../hooks/hooks.js';
 import { updateNode } from '../../store/mindMap/mindMapSlice.js';
 import "./CustomNode.css"
+import log from "../../utils/logger.js"
 
 const CustomNode = memo(({ id, selected, data }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState(data.label);
+    const [isHovered, setIsHovered] = useState(false);
+    const [localDimensions, setLocalDimensions] = useState({
+        width: data.node?.width || 'auto',
+        height: data.node?.height || 'auto'
+    });
     const inputRef = useRef(null);
     const resizeTimeoutRef = useRef(null);
     const dispatch = useAppDispatch();
+
+    // Update local dimensions when data changes
+    useEffect(() => {
+        setLocalDimensions({
+            width: data.node?.width || 'auto',
+            height: data.node?.height || 'auto'
+        });
+    }, [data.node?.width, data.node?.height]);
+
+    const handleMouseEnter = useCallback(() => {
+        setIsHovered(true);
+    }, []);
+
+    const handleMouseLeave = useCallback(() => {
+        setIsHovered(false);
+    }, []);
 
     const handleDoubleClick = useCallback((e) => {
         e.stopPropagation();
@@ -44,26 +66,33 @@ const CustomNode = memo(({ id, selected, data }) => {
         }
     }, [handleContentBlur, data.label]);
 
-    // Debounced resize handler to prevent rapid updates
+    // Optimized resize handler with debouncing
     const handleResize = useCallback((event, params) => {
+        // Update local dimensions immediately for smooth visual feedback
+        setLocalDimensions({
+            width: params.width,
+            height: params.height
+        });
+
+
+    }, [dispatch,]);
+
+    // Handle resize end for final update
+    const handleResizeEnd = useCallback((event, params) => {
+        // Clear any pending debounced updates
         if (resizeTimeoutRef.current) {
             clearTimeout(resizeTimeoutRef.current);
         }
-
-        resizeTimeoutRef.current = setTimeout(() => {
-            try {
-                dispatch(updateNode({
-                    nodeId: id,
-                    updates: {
-                        width: params.width,
-                        height: params.height
-                    }
-                }));
-            } catch (error) {
-                // Silently handle resize errors
-                console.warn('Resize update failed:', error);
+        // Final update with exact dimensions
+        log.debug('Resize end - final update:', { id, width: params.width, height: params.height });
+        dispatch(updateNode({
+            nodeId: id,
+            updates: {
+                width: params.width,
+                height: params.height,
+                position: { x: params.x, y: params.y }
             }
-        }, 50); // Increased debounce time
+        }));
     }, [dispatch, id]);
 
     // Cleanup timeout on unmount
@@ -75,8 +104,24 @@ const CustomNode = memo(({ id, selected, data }) => {
         };
     }, []);
 
+
+
+
     return (
-        <div className={`react-flow__node-default${selected ? ' selected-node' : ''}`}>
+        <div
+            className={`react-flow__node-default${selected ? ' selected-node' : ''}`}
+            style={{
+                width: localDimensions.width,
+                height: localDimensions.height,
+                justifyContent: 'center',
+                alignContent: 'center',
+                minWidth: '100px',
+                minHeight: '50px',
+                boxSizing: 'border-box',
+                transition: 'none', // Disable transitions during resize for better performance
+                position: 'relative'
+            }}
+        >
             {isEditing ? (
                 <input
                     ref={inputRef}
@@ -99,17 +144,15 @@ const CustomNode = memo(({ id, selected, data }) => {
                 <div onDoubleClick={handleDoubleClick}>{data.label || '[Empty]'}</div>
             )}
 
-            <NodeResizeControl
-                style={{
-                    background: 'transparent',
-                    border: 'none',
-                }}
+
+            <NodeResizer
+                isVisible={selected}
                 minWidth={100}
                 minHeight={50}
                 onResize={handleResize}
-            >
-                <ResizeIcon />
-            </NodeResizeControl>
+                onResizeEnd={handleResizeEnd}
+            />
+
             <Handle type="target" position={Position.Left} />
             <Handle type="source" position={Position.Right} />
         </div>
@@ -120,25 +163,3 @@ CustomNode.displayName = 'CustomNode';
 
 export default CustomNode;
 
-function ResizeIcon() {
-    return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            strokeWidth="2"
-            stroke="#ff0071"
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ position: 'absolute', right: 5, bottom: 5 }}
-        >
-            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-            <polyline points="16 20 20 20 20 16" />
-            <line x1="14" y1="14" x2="20" y2="20" />
-            <polyline points="8 4 4 4 4 8" />
-            <line x1="4" y1="4" x2="10" y2="10" />
-        </svg>
-    );
-}

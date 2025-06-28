@@ -8,8 +8,8 @@ export class Node {
         this.createdAt = new Date();
         this.updatedAt = new Date();
         this.metadata = {};
-        this.height = 50
-        this.width = 100
+        this.height = undefined
+        this.width = undefined
     }
 
     // Business logic methods
@@ -36,6 +36,7 @@ export class Node {
     updateDimensions(height, width) {
         this.height = height ?? this.height
         this.width = width ?? this.width
+        this.updatedAt = new Date();
     }
 
     updatePosition(newPosition) {
@@ -86,8 +87,8 @@ export class Node {
         node.createdAt = new Date(data.createdAt);
         node.updatedAt = new Date(data.updatedAt);
         node.metadata = data.metadata || {};
-        node.height = height
-        node.width = width
+        node.height = data.height
+        node.width = data.width
         return node;
     }
 } 
