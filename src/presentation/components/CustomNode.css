@@ -1,0 +1,4 @@
+.selected-node {
+    box-shadow: 0 0 0 1px #007bff, 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #007bff;
+}

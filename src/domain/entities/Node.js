@@ -1,0 +1,93 @@
+export class Node {
+    constructor(id, content, position = { x: 0, y: 0 }, parentId = null) {
+        this.id = id;
+        this.content = content;
+        this.position = position;
+        this.parentId = parentId;
+        this.children = [];
+        this.createdAt = new Date();
+        this.updatedAt = new Date();
+        this.metadata = {};
+        this.height = 50
+        this.width = 100
+    }
+
+    // Business logic methods
+    addChild(childId) {
+        if (!this.children.includes(childId)) {
+            this.children.push(childId);
+            this.updatedAt = new Date();
+        }
+    }
+
+    removeChild(childId) {
+        const index = this.children.indexOf(childId);
+        if (index > -1) {
+            this.children.splice(index, 1);
+            this.updatedAt = new Date();
+        }
+    }
+
+    updateContent(newContent) {
+        this.content = newContent;
+        this.updatedAt = new Date();
+    }
+
+    updateDimensions(height, width) {
+        this.height = height ?? this.height
+        this.width = width ?? this.width
+    }
+
+    updatePosition(newPosition) {
+        this.position = { ...this.position, ...newPosition };
+        this.updatedAt = new Date();
+    }
+
+    setParent(newParentId) {
+        this.parentId = newParentId;
+        this.updatedAt = new Date();
+    }
+
+    addMetadata(key, value) {
+        this.metadata[key] = value;
+        this.updatedAt = new Date();
+    }
+
+    // Validation methods
+    isValid() {
+        return this.id && this.content && this.content.trim().length > 0;
+    }
+
+    // Factory method
+    static create(content, position = { x: 0, y: 0 }, parentId = null) {
+        const id = `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        return new Node(id, content, position, parentId);
+    }
+
+    // Serialization
+    toJSON() {
+        return {
+            id: this.id,
+            content: this.content,
+            position: this.position,
+            parentId: this.parentId,
+            children: this.children,
+            createdAt: this.createdAt.toISOString(),
+            updatedAt: this.updatedAt.toISOString(),
+            metadata: this.metadata,
+            height: this.height,
+            width: this.width
+        };
+    }
+
+    static fromJSON(data) {
+        const node = new Node(data.id, data.content, data.position, data.parentId);
+        node.children = data.children || [];
+        node.createdAt = new Date(data.createdAt);
+        node.updatedAt = new Date(data.updatedAt);
+        node.metadata = data.metadata || {};
+        node.height = height
+        node.width = width
+        return node;
+    }
+} 
