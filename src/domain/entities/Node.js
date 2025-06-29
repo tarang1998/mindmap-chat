@@ -8,8 +8,8 @@ export class Node {
         this.createdAt = new Date();
         this.updatedAt = new Date();
         this.metadata = {};
-        this.height = undefined
-        this.width = undefined
+        this.height = 75
+        this.width = 150
         this.handleConfig = null; // Store handle configuration
     }
 

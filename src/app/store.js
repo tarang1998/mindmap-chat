@@ -7,6 +7,8 @@ import { MindMap } from '../domain/entities/MindMap.js';
 import mindMapReducer from '../store/mindMap/mindMapSlice.js';
 import uiReducer from '../store/ui/uiSlice.js';
 import errorReducer from '../store/error/errorSlice.js';
+import { createLogger } from 'redux-logger';
+
 
 // Custom transformer to handle MindMap instances
 const mindMapTransform = createTransform(
@@ -51,17 +53,37 @@ const rootReducer = combineReducers({
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
+const logger = createLogger({
+  collapsed: true,    // start each action log collapsed
+  diff: true,         // show diff of state
+  // customize colors if you like:
+  colors: {
+    title: () => 'yellow',        // action / state title
+    prevState: () => 'blue',
+    action: () => 'green',
+    nextState: () => 'magenta',
+  },
+});
+
 export const store = configureStore({
   reducer: persistedReducer,
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
+  middleware: (getDefaultMiddleware) => {
+    const base = getDefaultMiddleware({
       serializableCheck: {
         ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
         ignoredPaths: ['mindMap.currentMindMap']
       }
-    }),
+    });
+
+    // add logger in dev only
+    if (process.env.NODE_ENV !== 'production') {
+      return base.concat(logger);
+    }
+    return base;
+  },
   devTools: process.env.NODE_ENV !== 'production'
 });
+
 
 export const persistor = persistStore(store);
 

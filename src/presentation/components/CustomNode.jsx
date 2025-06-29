@@ -142,7 +142,7 @@ const CustomNode = memo(({ id, selected, data }) => {
 
     // Handle simple delete node - just remove the node and its connections
     const handleSimpleDeleteNode = useCallback(() => {
-        log.debug('Simple deleting node:', id);
+        log.debug('handleSimpleDeleteNode', id);
 
         const nodes = getNodes();
         const edges = getEdges();
@@ -187,7 +187,7 @@ const CustomNode = memo(({ id, selected, data }) => {
         }
 
         // Final update with exact dimensions
-        log.debug('Resize end - final update:', { id, width: params.width, height: params.height });
+        log.debug('handleResizeEnd', { id, width: params.width, height: params.height });
         dispatch(updateNode({
             nodeId: id,
             updates: {

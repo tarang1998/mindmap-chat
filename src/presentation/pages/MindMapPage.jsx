@@ -52,9 +52,6 @@ const MindMapContent = ({ mindMapId }) => {
     const viewportUpdateTimeoutRef = useRef(null);
     const { screenToFlowPosition } = useReactFlow();
 
-    // Node ID generator
-    let nodeIdCounter = 1;
-    const getNextNodeId = () => `node_${Date.now()}_${nodeIdCounter++}`;
 
     // Memoize nodes and edges to prevent unnecessary re-renders
     const nodesFromRedux = useMemo(() => {
@@ -72,12 +69,11 @@ const MindMapContent = ({ mindMapId }) => {
                 node: node,
                 parentId: node.parentId,
                 children: node.children,
-                handleConfig: node.handleConfig
-            },
-            style: {
+                handleConfig: node.handleConfig,
                 width: node.width,
                 height: node.height
             },
+
         }));
     }, [currentMindMap, selectedNodeId]);
 
@@ -104,23 +100,7 @@ const MindMapContent = ({ mindMapId }) => {
     const [nodes, setNodes, onNodesChange] = useNodesState(nodesFromRedux);
     const [edges, setEdges, onEdgesChange] = useEdgesState(edgesFromRedux);
 
-    console.log(nodes)
-
-
     const nodeTypes = useMemo(() => ({ custom: CustomNode }), []);
-
-
-
-    // useEffect(() => {
-    //     log.debug("MindMapPage", "Syncing nodes from redux store with local store", nodesFromRedux)
-    //     setNodes(nodesFromRedux);
-    // }, [nodesFromRedux, setNodes]);
-
-    // useEffect(() => {
-    //     log.debug("MindMapPage", "Syncing edges from redux store with local store", edgesFromRedux)
-    //     setEdges(edgesFromRedux)
-    // }, [edgesFromRedux, setEdges]);
-
 
     // Debounced viewport update function
     const debouncedViewportUpdate = useCallback((viewport) => {
@@ -135,29 +115,16 @@ const MindMapContent = ({ mindMapId }) => {
 
 
     const onNodeDragStop = useCallback((_, node) => {
-        log.debug("MindMapPage", "Updating store on node drag stop", node.id, node.position)
+        log.debug("onNodeDragStop", _, node)
         dispatch(updateNode({ nodeId: node.id, updates: { position: node.position } }));
     }, [dispatch]);
 
 
-    // const onConnect = useCallback(params => {
-    //     log.debug("MindMapPage", "Updating store on connecting nodes", params)
-    //     dispatch(connectNodes({
-    //         sourceNodeId: params.source,
-    //         targetNodeId: params.target,
-    //         sourceHandleId: params.sourceHandle,
-    //         targetHandleId: params.targetHandle,
-    //         edgeType: 'default'
-    //     }));
-    // }, [dispatch]);
-
-
     const onConnectEnd = useCallback((event, connectionState) => {
-        log.debug("MindMapPage", "onConnectEnd", { event, connectionState })
+        log.debug("onConnectEnd", { event, connectionState })
 
         // Check if we have a connection start but no valid target (dropped on pane)
         if (connectionState.fromNode && !connectionState.toNode) {
-            log.debug('Creating new node at drop position');
             const { clientX, clientY } = 'changedTouches' in event ? event.changedTouches[0] : event;
 
             // Get the exact position where the connection was dropped
@@ -166,7 +133,7 @@ const MindMapContent = ({ mindMapId }) => {
                 y: clientY,
             });
 
-            log.debug('Drop position:', dropPosition);
+            log.debug("onConnectEnd", 'Creating new node at drop position:', dropPosition);
 
             // Get the source handle ID from the connection state
             const sourceHandleId = connectionState.fromHandle.id;
@@ -213,7 +180,7 @@ const MindMapContent = ({ mindMapId }) => {
                 handleConfig: newNodeHandleConfig
             }));
         } else if (connectionState.fromNode && connectionState.toNode) {
-            log.debug("Connecting nodes", connectionState.fromNode.id, connectionState.toNode.id)
+            log.debug("onConnectEnd", "Connecting nodes", connectionState.fromNode.id, connectionState.toNode.id)
             dispatch(connectNodes({
                 sourceNodeId: connectionState.fromNode.id,
                 targetNodeId: connectionState.toNode.id,
@@ -227,12 +194,12 @@ const MindMapContent = ({ mindMapId }) => {
 
 
     const onNodeClick = useCallback((event, node) => {
-        log.debug("OnNodeClick called", node.id)
-        // dispatch(setSelectedNode(node.id));
+        log.debug("onNodeClick", event, node);
+
     }, [dispatch]);
 
     const onPaneClick = useCallback(() => {
-        log.debug("onPaneClick called")
+        log.debug("onPaneClick, Clearing node selection")
         dispatch(clearSelection());
     }, [dispatch]);
 
@@ -404,14 +371,16 @@ const MindMapContent = ({ mindMapId }) => {
     }, [nodes, edges, dispatch]);
 
     const handleOnSelectionChange = useCallback((obj) => {
-        log.debug("handleOnSelectionChange called", obj);
+        log.debug("handleOnSelectionChange", obj);
 
         // Only handle single selection - take the first node if multiple are somehow selected
         if (obj.nodes.length > 0) {
             const selectedNode = obj.nodes[0]; // Only take the first node
+            log.debug("handleOnSelectionChange", "Selected Node : ", selectedNode);
             dispatch(setSelectedNode(selectedNode.id));
         } else {
             // No nodes selected
+            log.debug("handleOnSelectionChange", "No nodes selected, clearing selection");
             dispatch(clearSelection());
         }
     }, [dispatch]);
@@ -441,9 +410,7 @@ const MindMapContent = ({ mindMapId }) => {
                         nodeTypes={nodeTypes} // an object mapping node type names to React components
                         onNodesChange={onNodesChange} // Called when nodes are moved, added, or removed.
                         onEdgesChange={onEdgesChange} // Called when edges are added, removed, or changed.
-
                         onConnectEnd={onConnectEnd} // Called when the user releases a connection. 
-
                         onNodesDelete={handleSimpleDeleteNode}
                         onNodeClick={onNodeClick}
                         onSelectionChange={handleOnSelectionChange}
@@ -451,7 +418,6 @@ const MindMapContent = ({ mindMapId }) => {
                         onNodeDragStop={onNodeDragStop}
                         onMove={onMove}
                         onMoveEnd={onMoveEnd}
-                        // selectionKeyCode={ }
                         defaultViewport={{ x: pan.x, y: pan.y, zoom: zoom }}
                         minZoom={0.1}
                         maxZoom={3}
@@ -506,10 +472,6 @@ const MindMapPage = () => {
     // Get mindMapId from URL params
     const { mindMapId } = useParams();
     const { loading, error } = useAppSelector(s => s.mindMap);
-
-
-    log.debug('MindMapPage', 'Loading mindMap : ', mindMapId);
-
 
     // Runs immediately after React has rendered
     // and then again any time the dependencies change - minMapId

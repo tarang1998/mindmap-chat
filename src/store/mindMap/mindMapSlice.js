@@ -31,7 +31,6 @@ export const loadMindMap = createAsyncThunk(
 
     async (mindMapId, { rejectWithValue }) => {
         // For now, return null - will be implemented with repository later
-        log.debug("minMapSlice", "Retrieving mindmap :", mindMapId)
         return null;
     }
 );
@@ -195,7 +194,6 @@ export const addNodeWithConnection = createAsyncThunk(
                 edge: edge ? edge.toJSON() : null,
                 mindMap: mindMap.currentMindMap.toJSON()
             };
-            log.debug("MindMapSlice", "addNodeWithConnection", data)
             return data
         } catch (error) {
             return rejectWithValue(error.message);
