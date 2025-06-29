@@ -14,6 +14,9 @@ export const createMindMap = createAsyncThunk(
             const mindMap = new MindMap(id, 'Untitled Mind Map');
 
             const node = Node.create('Node', { x: 250, y: 100 }, null);
+            node.setHandleConfig([
+                { id: `${node.id}-source-left`, type: 'source', position: 'left' },
+                { id: `${node.id}-source-right`, type: 'source', position: 'right' },])
             mindMap.addNode(node);
 
             return mindMap.toJSON();
@@ -133,6 +136,7 @@ export const connectNodes = createAsyncThunk(
             }
 
             const edge = Edge.create(sourceNodeId, targetNodeId, edgeType);
+
             // Store handle information in the edge
             edge.setHandleIds(sourceHandleId, targetHandleId);
             mindMap.currentMindMap.addEdge(edge);
@@ -156,11 +160,25 @@ export const addNodeWithConnection = createAsyncThunk(
             // Create the new node
             const node = Node.create(content, position, parentId);
 
-            // Set handle configuration if provided
-            if (handleConfig) {
-                node.handleConfig = handleConfig;
+            let nodeHandleConfigs = []
+            if (handleConfig.leftHandleType == "source") {
+                nodeHandleConfigs.push({ id: `${node.id}-source`, type: 'source', position: 'left' })
+            }
+            else {
+                nodeHandleConfigs.push({ id: `${node.id}-target`, type: 'target', position: 'left' })
             }
 
+
+            if (handleConfig.rightHandleType == "source") {
+                nodeHandleConfigs.push({ id: `${node.id}-source`, type: 'source', position: 'right' })
+            }
+            else {
+                nodeHandleConfigs.push({ id: `${node.id}-target`, type: 'target', position: 'right' })
+            }
+
+
+            // Set handle configuration if provided
+            node.setHandleConfig(nodeHandleConfigs)
             mindMap.currentMindMap.addNode(node);
 
             // Create the edge if sourceNodeId is provided
@@ -172,11 +190,13 @@ export const addNodeWithConnection = createAsyncThunk(
                 mindMap.currentMindMap.addEdge(edge);
             }
 
-            return {
+            const data = {
                 node: node.toJSON(),
                 edge: edge ? edge.toJSON() : null,
                 mindMap: mindMap.currentMindMap.toJSON()
             };
+            log.debug("MindMapSlice", "addNodeWithConnection", data)
+            return data
         } catch (error) {
             return rejectWithValue(error.message);
         }

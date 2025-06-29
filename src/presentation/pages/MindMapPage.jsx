@@ -13,7 +13,7 @@ import {
     addEdge,
     getIncomers,
     getOutgoers,
-    getConnectedEdges
+    getConnectedEdges,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useAppSelector, useAppDispatch } from '../../hooks/hooks.js';
@@ -52,13 +52,9 @@ const MindMapContent = ({ mindMapId }) => {
     const viewportUpdateTimeoutRef = useRef(null);
     const { screenToFlowPosition } = useReactFlow();
 
-
     // Node ID generator
     let nodeIdCounter = 1;
     const getNextNodeId = () => `node_${Date.now()}_${nodeIdCounter++}`;
-
-
-
 
     // Memoize nodes and edges to prevent unnecessary re-renders
     const nodesFromRedux = useMemo(() => {
@@ -76,11 +72,12 @@ const MindMapContent = ({ mindMapId }) => {
                 node: node,
                 parentId: node.parentId,
                 children: node.children,
+                handleConfig: node.handleConfig
             },
             style: {
                 width: node.width,
                 height: node.height
-            }, handleConfig: node.handleConfig
+            },
         }));
     }, [currentMindMap, selectedNodeId]);
 
@@ -106,6 +103,8 @@ const MindMapContent = ({ mindMapId }) => {
     // React Flow local state
     const [nodes, setNodes, onNodesChange] = useNodesState(nodesFromRedux);
     const [edges, setEdges, onEdgesChange] = useEdgesState(edgesFromRedux);
+
+    console.log(nodes)
 
 
     const nodeTypes = useMemo(() => ({ custom: CustomNode }), []);
@@ -141,16 +140,16 @@ const MindMapContent = ({ mindMapId }) => {
     }, [dispatch]);
 
 
-    const onConnect = useCallback(params => {
-        log.debug("MindMapPage", "Updating store on connecting nodes", params)
-        dispatch(connectNodes({
-            sourceNodeId: params.source,
-            targetNodeId: params.target,
-            sourceHandleId: params.sourceHandle,
-            targetHandleId: params.targetHandle,
-            edgeType: 'default'
-        }));
-    }, [dispatch]);
+    // const onConnect = useCallback(params => {
+    //     log.debug("MindMapPage", "Updating store on connecting nodes", params)
+    //     dispatch(connectNodes({
+    //         sourceNodeId: params.source,
+    //         targetNodeId: params.target,
+    //         sourceHandleId: params.sourceHandle,
+    //         targetHandleId: params.targetHandle,
+    //         edgeType: 'default'
+    //     }));
+    // }, [dispatch]);
 
 
     const onConnectEnd = useCallback((event, connectionState) => {
@@ -194,7 +193,11 @@ const MindMapContent = ({ mindMapId }) => {
                     }
                 } else {
                     // Non-root node - inherit handle config from parent node
-                    newNodeHandleConfig = sourceNode.handleConfig
+                    newNodeHandleConfig = {
+                        leftHandleType: sourceNode.data.handleConfig[0].type,
+                        rightHandleType: sourceNode.data.handleConfig[1].type
+                    }
+
                 }
                 // Root node - determine handle config based on source handle
 
@@ -209,13 +212,18 @@ const MindMapContent = ({ mindMapId }) => {
                 sourceHandleId: sourceHandleId,
                 handleConfig: newNodeHandleConfig
             }));
-        } else {
-            log.debug('Not creating node - conditions not met:', {
-                hasFromNode: !!connectionState.fromNode,
-                hasToNode: !!connectionState.toNode
-            });
+        } else if (connectionState.fromNode && connectionState.toNode) {
+            log.debug("Connecting nodes", connectionState.fromNode.id, connectionState.toNode.id)
+            dispatch(connectNodes({
+                sourceNodeId: connectionState.fromNode.id,
+                targetNodeId: connectionState.toNode.id,
+                sourceHandleId: connectionState.fromHandle.id,
+                targetHandleId: connectionState.toHandle.id,
+                edgeType: 'default'
+            }));
+
         }
-    }, [screenToFlowPosition, dispatch, nodes]);
+    }, [screenToFlowPosition, dispatch, nodes, edges]);
 
 
     const onNodeClick = useCallback((event, node) => {
@@ -349,6 +357,51 @@ const MindMapContent = ({ mindMapId }) => {
         });
     }, [nodes, edges, dispatch]);
 
+    const handleSimpleDeleteNode = useCallback((nodesToDelete) => {
+        log.debug("handleSimpleDeleteNode called with nodes:", nodesToDelete);
+
+        if (nodesToDelete.length === 0) return;
+
+        // Filter out root nodes (nodes without parentId) to prevent their deletion
+        const nodesToDeleteFiltered = nodesToDelete.filter(node => {
+            const nodeData = nodes.find(n => n.id === node.id)?.data;
+            const isRootNode = !nodeData?.parentId;
+
+            if (isRootNode) {
+                log.debug('Preventing deletion of root node:', node.id);
+            }
+
+            return !isRootNode; // Only allow deletion of non-root nodes
+        });
+
+        if (nodesToDeleteFiltered.length === 0) {
+            log.debug('No valid nodes to delete after filtering out root nodes');
+            return;
+        }
+
+        // Get node IDs to delete
+        const nodeIds = nodesToDeleteFiltered.map(node => node.id);
+
+        // Find all edges connected to these nodes and remove them
+        const edgesToRemove = edges.filter(edge =>
+            nodeIds.includes(edge.source) || nodeIds.includes(edge.target)
+        );
+
+        log.debug('Simple delete plan:', {
+            nodesToDelete: nodeIds,
+            edgesToRemove: edgesToRemove.map(e => e.id)
+        });
+
+        // Remove all connected edges from Redux
+        edgesToRemove.forEach(edge => {
+            dispatch(deleteEdge(edge.id));
+        });
+
+        // Remove all nodes from Redux
+        nodeIds.forEach(nodeId => {
+            dispatch(deleteNode(nodeId));
+        });
+    }, [nodes, edges, dispatch]);
 
     const handleOnSelectionChange = useCallback((obj) => {
         log.debug("handleOnSelectionChange called", obj);
@@ -391,8 +444,7 @@ const MindMapContent = ({ mindMapId }) => {
 
                         onConnectEnd={onConnectEnd} // Called when the user releases a connection. 
 
-                        onNodesDelete={handleSmartDeleteNode}
-                        onConnect={onConnect} // Called when a new connection (edge) is made between nodes.
+                        onNodesDelete={handleSimpleDeleteNode}
                         onNodeClick={onNodeClick}
                         onSelectionChange={handleOnSelectionChange}
                         onPaneClick={onPaneClick}

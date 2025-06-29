@@ -140,6 +140,35 @@ const CustomNode = memo(({ id, selected, data }) => {
         dispatch(deleteNode(id));
     }, [dispatch, id, getNodes, getEdges]);
 
+    // Handle simple delete node - just remove the node and its connections
+    const handleSimpleDeleteNode = useCallback(() => {
+        log.debug('Simple deleting node:', id);
+
+        const nodes = getNodes();
+        const edges = getEdges();
+        const nodeToDelete = nodes.find(node => node.id === id);
+
+        if (!nodeToDelete) return;
+
+        // Find all edges connected to this node and remove them
+        const edgesToRemove = edges.filter(edge =>
+            edge.source === id || edge.target === id
+        );
+
+        log.debug('Simple delete plan:', {
+            nodeToDelete: id,
+            edgesToRemove: edgesToRemove.map(e => e.id)
+        });
+
+        // Remove all connected edges from Redux
+        edgesToRemove.forEach(edge => {
+            dispatch(deleteEdge(edge.id));
+        });
+
+        // Remove the node from Redux
+        dispatch(deleteNode(id));
+    }, [dispatch, id, getNodes, getEdges]);
+
     // Optimized resize handler with debouncing
     const handleResize = useCallback((event, params) => {
         // Update local dimensions immediately for smooth visual feedback
@@ -238,36 +267,48 @@ const CustomNode = memo(({ id, selected, data }) => {
                     onResizeEnd={handleResizeEnd}
                 />
 
-                {/* Root node: left is source, right is target (but both can create nodes)
-                    Regular nodes: handle configuration based on node data */}
-                {!data.parentId ? (
-                    // Root node - left is source, right is target (both can create nodes)
-                    <>
+                {/* Render handles based on handleConfig array */}
+                {data.handleConfig && data.handleConfig.length > 0 ? (
+                    // Use the handleConfig array to render handles
+                    data.handleConfig.map((handle, index) => (
                         <Handle
-                            id={`${id}-source-left`}
-                            type="source"
-                            position={Position.Left}
+                            key={`${id}-${handle.id}`}
+                            id={handle.id}
+                            type={handle.type}
+                            position={handle.position === 'left' ? Position.Left : Position.Right}
                         />
-                        <Handle
-                            id={`${id}-source-right`}
-                            type="source"
-                            position={Position.Right}
-                        />
-                    </>
+                    ))
                 ) : (
-                    // Regular node - handle configuration based on node data
-                    <>
-                        <Handle
-                            id={`${id}-${data.node?.handleConfig?.leftHandleType || 'source'}`}
-                            type={data.node?.handleConfig?.leftHandleType || 'source'}
-                            position={Position.Left}
-                        />
-                        <Handle
-                            id={`${id}-${data.node?.handleConfig?.rightHandleType || 'target'}`}
-                            type={data.node?.handleConfig?.rightHandleType || 'target'}
-                            position={Position.Right}
-                        />
-                    </>
+                    // Fallback for nodes without handleConfig - use old logic
+                    !data.parentId ? (
+                        // Root node - left is source, right is target (both can create nodes)
+                        <>
+                            <Handle
+                                id={`${id}-source-left`}
+                                type="source"
+                                position={Position.Left}
+                            />
+                            <Handle
+                                id={`${id}-source-right`}
+                                type="source"
+                                position={Position.Right}
+                            />
+                        </>
+                    ) : (
+                        // Regular node - handle configuration based on node data
+                        <>
+                            <Handle
+                                id={`${id}-${data.node?.handleConfig?.leftHandleType || 'source'}`}
+                                type={data.node?.handleConfig?.leftHandleType || 'source'}
+                                position={Position.Left}
+                            />
+                            <Handle
+                                id={`${id}-${data.node?.handleConfig?.rightHandleType || 'target'}`}
+                                type={data.node?.handleConfig?.rightHandleType || 'target'}
+                                position={Position.Right}
+                            />
+                        </>
+                    )
                 )}
             </div>
 
@@ -282,7 +323,7 @@ const CustomNode = memo(({ id, selected, data }) => {
                     {/* Only show delete button for non-root nodes */}
                     {data.parentId && (
                         <button
-                            onClick={handleDeleteNode}
+                            onClick={handleSimpleDeleteNode}
                             style={{
                                 width: `${iconSize}px`,
                                 height: `${iconSize}px`,
