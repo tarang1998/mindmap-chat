@@ -201,80 +201,6 @@ export const addNodeWithConnection = createAsyncThunk(
     }
 );
 
-export const smartDeleteNodes = createAsyncThunk(
-    'mindMap/smartDeleteNodes',
-    async (nodeIds, { getState, rejectWithValue }) => {
-        try {
-            const { mindMap } = getState();
-            if (!mindMap.currentMindMap) {
-                throw new Error('No mind map loaded');
-            }
-
-            // Get all nodes and edges as plain arrays
-            const nodes = mindMap.currentMindMap.getAllNodes();
-            const edges = mindMap.currentMindMap.getAllEdges();
-
-            // Find all nodes to delete
-            const nodesToDelete = nodeIds.map(id => mindMap.currentMindMap.getNode(id)).filter(Boolean);
-            if (nodesToDelete.length === 0) throw new Error('No valid nodes to delete');
-
-            // Collect all edges that will be affected
-            const edgesToRemove = new Set();
-            const newEdgesToCreate = [];
-
-
-            // For each node to delete, find its connections and plan the reconnections
-            nodesToDelete.forEach(node => {
-                const incomers = getIncomers(node, nodes, edges);
-                const outgoers = getOutgoers(node, nodes, edges);
-                const connectedEdges = getConnectedEdges([node], edges);
-
-                console.log(incomers, outgoers, connectedEdges)
-
-                // Mark edges for removal
-                connectedEdges.forEach(edge => edgesToRemove.add(edge.id));
-
-                // Plan new connections from incomers to outgoers
-                incomers.forEach(sourceNode => {
-                    // Only create connections if source is not being deleted
-                    if (!nodeIds.includes(sourceNode.id)) {
-                        outgoers.forEach(targetNode => {
-                            // Only create connections if target is not being deleted
-                            if (!nodeIds.includes(targetNode.id)) {
-                                newEdgesToCreate.push({
-                                    sourceId: sourceNode.id,
-                                    targetId: targetNode.id
-                                });
-                            }
-                        });
-                    }
-                });
-            });
-
-            // Remove all affected edges
-            edgesToRemove.forEach(edgeId => {
-                mindMap.currentMindMap.edges.delete(edgeId);
-            });
-
-            console.log(nodes, edges, nodesToDelete, edgesToRemove, newEdgesToCreate)
-
-            // Create new edges
-            newEdgesToCreate.forEach(({ sourceId, targetId }) => {
-                const newEdge = Edge.create(sourceId, targetId, 'default');
-                mindMap.currentMindMap.addEdge(newEdge);
-            });
-
-            // Remove all nodes
-            nodeIds.forEach(nodeId => {
-                mindMap.currentMindMap.removeNode(nodeId);
-            });
-
-            return mindMap.currentMindMap.toJSON();
-        } catch (error) {
-            return rejectWithValue(error.message);
-        }
-    }
-);
 
 export const deleteEdge = createAsyncThunk(
     'mindMap/deleteEdge',
@@ -484,17 +410,6 @@ const mindMapSlice = createSlice({
                 state.error = action.payload;
             })
 
-            // Smart Delete Multiple Nodes
-            .addCase(smartDeleteNodes.fulfilled, (state, action) => {
-                state.loading = false;
-                state.currentMindMap = action.payload ? MindMap.fromJSON(action.payload) : null;
-                state.selectedNodeId = null;
-                state.hasUnsavedChanges = true;
-            })
-            .addCase(smartDeleteNodes.rejected, (state, action) => {
-                state.loading = false;
-                state.error = action.payload;
-            })
 
             // Delete Edge
             .addCase(deleteEdge.fulfilled, (state, action) => {

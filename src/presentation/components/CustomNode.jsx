@@ -90,11 +90,6 @@ const CustomNode = memo(({ id, selected, data }) => {
             edgesToRemove: edgesToRemove.map(e => e.id)
         });
 
-        // Remove all connected edges from Redux
-        edgesToRemove.forEach(edge => {
-            dispatch(deleteEdge(edge.id));
-        });
-
         // Remove the node from Redux
         dispatch(deleteNode(id));
     }, [dispatch, id, getNodes, getEdges]);

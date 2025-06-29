@@ -47,6 +47,13 @@ export class MindMap {
         }
         edgesToRemove.forEach(edgeId => this.edges.delete(edgeId));
 
+        // Set parentId to null for all child nodes of this node
+        for (const [childNodeId, childNode] of this.nodes) {
+            if (childNode.parentId === nodeId) {
+                childNode.setParent(null);
+            }
+        }
+
         // Remove node from parent's children
         if (node.parentId) {
             const parent = this.nodes.get(node.parentId);
