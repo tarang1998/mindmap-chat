@@ -125,7 +125,7 @@ export const deleteNode = createAsyncThunk(
 
 export const connectNodes = createAsyncThunk(
     'mindMap/connectNodes',
-    async ({ sourceNodeId, targetNodeId, edgeType }, { getState, rejectWithValue }) => {
+    async ({ sourceNodeId, targetNodeId, sourceHandleId, targetHandleId, edgeType }, { getState, rejectWithValue }) => {
         try {
             const { mindMap } = getState();
             if (!mindMap.currentMindMap) {
@@ -133,6 +133,8 @@ export const connectNodes = createAsyncThunk(
             }
 
             const edge = Edge.create(sourceNodeId, targetNodeId, edgeType);
+            // Store handle information in the edge
+            edge.setHandleIds(sourceHandleId, targetHandleId);
             mindMap.currentMindMap.addEdge(edge);
 
             return { edge: edge.toJSON(), mindMap: mindMap.currentMindMap.toJSON() };
@@ -144,7 +146,7 @@ export const connectNodes = createAsyncThunk(
 
 export const addNodeWithConnection = createAsyncThunk(
     'mindMap/addNodeWithConnection',
-    async ({ content, position, parentId, sourceNodeId }, { getState, rejectWithValue }) => {
+    async ({ content, position, parentId, sourceNodeId, sourceHandleId, handleConfig }, { getState, rejectWithValue }) => {
         try {
             const { mindMap } = getState();
             if (!mindMap.currentMindMap) {
@@ -153,12 +155,20 @@ export const addNodeWithConnection = createAsyncThunk(
 
             // Create the new node
             const node = Node.create(content, position, parentId);
+
+            // Set handle configuration if provided
+            if (handleConfig) {
+                node.handleConfig = handleConfig;
+            }
+
             mindMap.currentMindMap.addNode(node);
 
             // Create the edge if sourceNodeId is provided
             let edge = null;
             if (sourceNodeId) {
                 edge = Edge.create(sourceNodeId, node.id, 'default');
+                // Store handle information in the edge
+                edge.setHandleIds(sourceHandleId, `${node.id}-target`);
                 mindMap.currentMindMap.addEdge(edge);
             }
 

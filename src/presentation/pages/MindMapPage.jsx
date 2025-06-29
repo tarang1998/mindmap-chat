@@ -80,7 +80,7 @@ const MindMapContent = ({ mindMapId }) => {
             style: {
                 width: node.width,
                 height: node.height
-            }
+            }, handleConfig: node.handleConfig
         }));
     }, [currentMindMap, selectedNodeId]);
 
@@ -93,6 +93,8 @@ const MindMapContent = ({ mindMapId }) => {
             id: edge.id,
             source: edge.sourceNodeId,
             target: edge.targetNodeId,
+            sourceHandle: edge.sourceHandleId,
+            targetHandle: edge.targetHandleId,
             type: edge.type,
             style: edge.style,
             data: { edge: edge }
@@ -144,6 +146,8 @@ const MindMapContent = ({ mindMapId }) => {
         dispatch(connectNodes({
             sourceNodeId: params.source,
             targetNodeId: params.target,
+            sourceHandleId: params.sourceHandle,
+            targetHandleId: params.targetHandle,
             edgeType: 'default'
         }));
     }, [dispatch]);
@@ -165,13 +169,45 @@ const MindMapContent = ({ mindMapId }) => {
 
             log.debug('Drop position:', dropPosition);
 
+            // Get the source handle ID from the connection state
+            const sourceHandleId = connectionState.fromHandle.id;
+
+            // Determine handle configuration for the new node based on source handle
+            let newNodeHandleConfig = null;
+
+            // Check if the source node is a root node (no parentId)
+            const sourceNode = nodes.find(node => node.id === connectionState.fromNode.id);
+            if (sourceNode) {
+                if (!sourceNode.data?.parentId) {
+                    if (sourceHandleId === `${connectionState.fromNode.id}-source-left`) {
+                        // From left handle of root node - new node should have left source, right target
+                        newNodeHandleConfig = {
+                            leftHandleType: 'source',
+                            rightHandleType: 'target'
+                        };
+                    } else if (sourceHandleId === `${connectionState.fromNode.id}-source-right`) {
+                        // From right handle of root node - new node should have right source, left target
+                        newNodeHandleConfig = {
+                            leftHandleType: 'target',
+                            rightHandleType: 'source'
+                        };
+                    }
+                } else {
+                    // Non-root node - inherit handle config from parent node
+                    newNodeHandleConfig = sourceNode.handleConfig
+                }
+                // Root node - determine handle config based on source handle
+
+            }
 
             // Create a new node at the exact drop position with connection
             dispatch(addNodeWithConnection({
                 content: 'New Node',
                 position: dropPosition,
                 parentId: connectionState.fromNode.id,
-                sourceNodeId: connectionState.fromNode.id
+                sourceNodeId: connectionState.fromNode.id,
+                sourceHandleId: sourceHandleId,
+                handleConfig: newNodeHandleConfig
             }));
         } else {
             log.debug('Not creating node - conditions not met:', {
@@ -179,7 +215,7 @@ const MindMapContent = ({ mindMapId }) => {
                 hasToNode: !!connectionState.toNode
             });
         }
-    }, [screenToFlowPosition, dispatch]);
+    }, [screenToFlowPosition, dispatch, nodes]);
 
 
     const onNodeClick = useCallback((event, node) => {
@@ -243,9 +279,21 @@ const MindMapContent = ({ mindMapId }) => {
                     outgoers.forEach(targetNode => {
                         // Only create connections if target is not being deleted
                         if (!nodeIds.includes(targetNode.id)) {
+                            // Find the edge that connects sourceNode to the node being deleted
+                            const sourceEdge = edges.find(edge =>
+                                edge.source === sourceNode.id && edge.target === node.id
+                            );
+
+                            // Find the edge that connects the node being deleted to targetNode
+                            const targetEdge = edges.find(edge =>
+                                edge.source === node.id && edge.target === targetNode.id
+                            );
+
                             newEdgesToCreate.push({
                                 sourceId: sourceNode.id,
-                                targetId: targetNode.id
+                                targetId: targetNode.id,
+                                sourceHandleId: sourceEdge?.sourceHandle || `${sourceNode.id}-source`,
+                                targetHandleId: targetEdge?.targetHandle || `${targetNode.id}-target`
                             });
                         }
                     });
@@ -268,10 +316,12 @@ const MindMapContent = ({ mindMapId }) => {
         });
 
         // Create new edges in Redux
-        newEdgesToCreate.forEach(({ sourceId, targetId }) => {
+        newEdgesToCreate.forEach(({ sourceId, targetId, sourceHandleId, targetHandleId }) => {
             dispatch(connectNodes({
                 sourceNodeId: sourceId,
                 targetNodeId: targetId,
+                sourceHandleId: sourceHandleId,
+                targetHandleId: targetHandleId,
                 edgeType: 'default'
             }));
         });

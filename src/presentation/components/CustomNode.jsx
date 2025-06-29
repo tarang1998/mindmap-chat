@@ -95,9 +95,21 @@ const CustomNode = memo(({ id, selected, data }) => {
         // Plan new connections from incomers to outgoers
         incomers.forEach(sourceNode => {
             outgoers.forEach(targetNode => {
+                // Find the edge that connects sourceNode to the node being deleted
+                const sourceEdge = edges.find(edge =>
+                    edge.source === sourceNode.id && edge.target === nodeToDelete.id
+                );
+
+                // Find the edge that connects the node being deleted to targetNode
+                const targetEdge = edges.find(edge =>
+                    edge.source === nodeToDelete.id && edge.target === targetNode.id
+                );
+
                 newEdgesToCreate.push({
                     sourceId: sourceNode.id,
-                    targetId: targetNode.id
+                    targetId: targetNode.id,
+                    sourceHandleId: sourceEdge?.sourceHandle || `${sourceNode.id}-source`,
+                    targetHandleId: targetEdge?.targetHandle || `${targetNode.id}-target`
                 });
             });
         });
@@ -114,10 +126,12 @@ const CustomNode = memo(({ id, selected, data }) => {
         });
 
         // Create new edges in Redux
-        newEdgesToCreate.forEach(({ sourceId, targetId }) => {
+        newEdgesToCreate.forEach(({ sourceId, targetId, sourceHandleId, targetHandleId }) => {
             dispatch(connectNodes({
                 sourceNodeId: sourceId,
                 targetNodeId: targetId,
+                sourceHandleId: sourceHandleId,
+                targetHandleId: targetHandleId,
                 edgeType: 'default'
             }));
         });
@@ -224,8 +238,37 @@ const CustomNode = memo(({ id, selected, data }) => {
                     onResizeEnd={handleResizeEnd}
                 />
 
-                <Handle type="target" position={Position.Left} />
-                <Handle type="source" position={Position.Right} />
+                {/* Root node: left is source, right is target (but both can create nodes)
+                    Regular nodes: handle configuration based on node data */}
+                {!data.parentId ? (
+                    // Root node - left is source, right is target (both can create nodes)
+                    <>
+                        <Handle
+                            id={`${id}-source-left`}
+                            type="source"
+                            position={Position.Left}
+                        />
+                        <Handle
+                            id={`${id}-source-right`}
+                            type="source"
+                            position={Position.Right}
+                        />
+                    </>
+                ) : (
+                    // Regular node - handle configuration based on node data
+                    <>
+                        <Handle
+                            id={`${id}-${data.node?.handleConfig?.leftHandleType || 'source'}`}
+                            type={data.node?.handleConfig?.leftHandleType || 'source'}
+                            position={Position.Left}
+                        />
+                        <Handle
+                            id={`${id}-${data.node?.handleConfig?.rightHandleType || 'target'}`}
+                            type={data.node?.handleConfig?.rightHandleType || 'target'}
+                            position={Position.Right}
+                        />
+                    </>
+                )}
             </div>
 
             {/* Node Toolbar - only visible when selected and zoom level is appropriate */}

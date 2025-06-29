@@ -4,6 +4,8 @@ export class Edge {
         this.sourceNodeId = sourceNodeId;
         this.targetNodeId = targetNodeId;
         this.type = type; // 'default', 'dashed', 'dotted', etc.
+        this.sourceHandleId = null; // Store the source handle ID
+        this.targetHandleId = null; // Store the target handle ID
         this.style = {
             color: '#666',
             width: 2,
@@ -22,6 +24,13 @@ export class Edge {
 
     updateType(newType) {
         this.type = newType;
+        this.updatedAt = new Date();
+    }
+
+    // Set handle information
+    setHandleIds(sourceHandleId, targetHandleId) {
+        this.sourceHandleId = sourceHandleId;
+        this.targetHandleId = targetHandleId;
         this.updatedAt = new Date();
     }
 
@@ -61,6 +70,8 @@ export class Edge {
             sourceNodeId: this.sourceNodeId,
             targetNodeId: this.targetNodeId,
             type: this.type,
+            sourceHandleId: this.sourceHandleId,
+            targetHandleId: this.targetHandleId,
             style: this.style,
             createdAt: this.createdAt.toISOString(),
             updatedAt: this.updatedAt.toISOString(),
@@ -70,6 +81,8 @@ export class Edge {
 
     static fromJSON(data) {
         const edge = new Edge(data.id, data.sourceNodeId, data.targetNodeId, data.type);
+        edge.sourceHandleId = data.sourceHandleId || null;
+        edge.targetHandleId = data.targetHandleId || null;
         edge.style = data.style || { color: '#666', width: 2, opacity: 1 };
         edge.createdAt = new Date(data.createdAt);
         edge.updatedAt = new Date(data.updatedAt);

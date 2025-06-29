@@ -10,6 +10,7 @@ export class Node {
         this.metadata = {};
         this.height = undefined
         this.width = undefined
+        this.handleConfig = null; // Store handle configuration
     }
 
     // Business logic methods
@@ -49,6 +50,12 @@ export class Node {
         this.updatedAt = new Date();
     }
 
+    // Set handle configuration
+    setHandleConfig(handleConfig) {
+        this.handleConfig = handleConfig;
+        this.updatedAt = new Date();
+    }
+
     addMetadata(key, value) {
         this.metadata[key] = value;
         this.updatedAt = new Date();
@@ -77,7 +84,8 @@ export class Node {
             updatedAt: this.updatedAt.toISOString(),
             metadata: this.metadata,
             height: this.height,
-            width: this.width
+            width: this.width,
+            handleConfig: this.handleConfig
         };
     }
 
@@ -89,6 +97,7 @@ export class Node {
         node.metadata = data.metadata || {};
         node.height = data.height
         node.width = data.width
+        node.handleConfig = data.handleConfig
         return node;
     }
 } 
