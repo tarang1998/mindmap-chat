@@ -182,7 +182,7 @@ const CustomNode = memo(({ id, selected, data }) => {
     const getIconSize = () => {
         const baseSize = 14;
         // Hide toolbar when zoomed out too much (zoom < 0.5)
-        if (zoom < 0.8) {
+        if (zoom < 0.7) {
             return null;
         }
 
@@ -279,55 +279,58 @@ const CustomNode = memo(({ id, selected, data }) => {
                     offset={7}
                     align="center"
                 >
-                    <button
-                        onClick={handleDeleteNode}
-                        style={{
-                            width: `${iconSize}px`,
-                            height: `${iconSize}px`,
-                            border: 'none',
-                            background: 'rgba(255, 55, 66, 0.95)',
-                            borderRadius: '50%',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'white',
-                            fontSize: `${Math.max(iconSize, 8)}px`,
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                            transition: 'all 0.2s ease',
-                            backdropFilter: 'blur(4px)',
-                            border: '1px solid rgba(255, 255, 255, 0.2)'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.target.style.background = 'rgba(245, 41, 51, 0.95)';
-                            e.target.style.transform = 'scale(1.15)';
-                            e.target.style.boxShadow = '0 4px 12px rgba(255, 71, 87, 0.3)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.target.style.background = 'rgba(255, 55, 66, 0.95)';
-                            e.target.style.transform = 'scale(1)';
-                            e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
-                        }}
-                        title="Delete Node"
-                    >
-                        <svg
-                            width={Math.max(iconSize * 0.6, 10)}
-                            height={Math.max(iconSize * 0.6, 10)}
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            color='rgba(0, 0, 0, 0.9)'
+                    {/* Only show delete button for non-root nodes */}
+                    {data.parentId && (
+                        <button
+                            onClick={handleDeleteNode}
+                            style={{
+                                width: `${iconSize}px`,
+                                height: `${iconSize}px`,
+                                border: 'none',
+                                background: 'rgba(251, 158, 163, 0.95)',
+                                borderRadius: '50%',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                fontSize: `${Math.max(iconSize, 8)}px`,
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                transition: 'all 0.2s ease',
+                                backdropFilter: 'blur(4px)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.target.style.background = 'rgb(255, 0, 13)';
+                                e.target.style.transform = 'scale(1.15)';
+                                e.target.style.boxShadow = '0 4px 12px rgba(255, 71, 87, 0.3)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.target.style.background = 'rgba(251, 158, 163, 0.95)';
+                                e.target.style.transform = 'scale(1)';
+                                e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+                            }}
+                            title="Delete Node"
                         >
-                            <path d="M3 6h18" />
-                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                            <line x1="10" y1="11" x2="10" y2="17" />
-                            <line x1="14" y1="11" x2="14" y2="17" />
-                        </svg>
-                    </button>
+                            <svg
+                                width={Math.max(iconSize * 0.6, 10)}
+                                height={Math.max(iconSize * 0.6, 10)}
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                color='rgba(0, 0, 0, 0.9)'
+                            >
+                                <path d="M3 6h18" />
+                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                                <line x1="10" y1="11" x2="10" y2="17" />
+                                <line x1="14" y1="11" x2="14" y2="17" />
+                            </svg>
+                        </button>
+                    )}
                 </NodeToolbar>
             )}
         </>

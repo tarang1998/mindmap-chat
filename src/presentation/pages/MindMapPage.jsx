@@ -254,15 +254,32 @@ const MindMapContent = ({ mindMapId }) => {
 
         if (nodesToDelete.length === 0) return;
 
+        // Filter out root nodes (nodes without parentId) to prevent their deletion
+        const nodesToDeleteFiltered = nodesToDelete.filter(node => {
+            const nodeData = nodes.find(n => n.id === node.id)?.data;
+            const isRootNode = !nodeData?.parentId;
+
+            if (isRootNode) {
+                log.debug('Preventing deletion of root node:', node.id);
+            }
+
+            return !isRootNode; // Only allow deletion of non-root nodes
+        });
+
+        if (nodesToDeleteFiltered.length === 0) {
+            log.debug('No valid nodes to delete after filtering out root nodes');
+            return;
+        }
+
         // Use React Flow state for the utilities
-        const nodeIds = nodesToDelete.map(node => node.id);
+        const nodeIds = nodesToDeleteFiltered.map(node => node.id);
 
         // Find all edges that will be affected
         const edgesToRemove = new Set();
         const newEdgesToCreate = [];
 
         // For each node to delete, find its connections and plan the reconnections
-        nodesToDelete.forEach(node => {
+        nodesToDeleteFiltered.forEach(node => {
             const incomers = getIncomers(node, nodes, edges);
             const outgoers = getOutgoers(node, nodes, edges);
             const connectedEdges = getConnectedEdges([node], edges);
@@ -389,7 +406,7 @@ const MindMapContent = ({ mindMapId }) => {
                         fitView={false}
                         nodeOrigin={[0.5, 0]}
                         proOptions={{ hideAttribution: true }}
-                        deleteKeyCode={["Backspace", "Delete"]}
+                        deleteKeyCode={null}
                         multiSelectionKeyCode={null}
                         selectNodesOnDrag={false}
                         selectionKeyCode={null}
