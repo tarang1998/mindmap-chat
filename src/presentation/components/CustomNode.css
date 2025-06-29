@@ -2,3 +2,18 @@
     box-shadow: 0 0 0 1px #007bff, 0 2px 8px rgba(0, 0, 0, 0.08);
     border: 1px solid #007bff;
 }
+
+
+
+/* Target handles that are already connected */
+.react-flow__handle.handle-connected {
+    cursor: not-allowed !important;
+    opacity: 1;
+    background-color: red !important;
+}
+
+.react-flow__handle.handle-not-connected {
+    cursor: crosshair !important;
+    opacity: 1;
+    background-color: green !important;
+}

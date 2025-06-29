@@ -1,5 +1,5 @@
 import React, { useState, useRef, memo, useCallback, useEffect } from 'react';
-import { Handle, NodeResizeControl, NodeResizer, NodeToolbar, Position, useViewport, useReactFlow, getIncomers, getOutgoers, getConnectedEdges } from '@xyflow/react';
+import { Handle, NodeResizeControl, NodeResizer, NodeToolbar, Position, useViewport, useReactFlow, getIncomers, getOutgoers, getConnectedEdges, useHandleConnections } from '@xyflow/react';
 import { useAppDispatch } from '../../hooks/hooks.js';
 import { updateNode, deleteNode, connectNodes, deleteEdge } from '../../store/mindMap/mindMapSlice.js';
 import "./CustomNode.css"
@@ -68,77 +68,7 @@ const CustomNode = memo(({ id, selected, data }) => {
         }
     }, [handleContentBlur, data.label]);
 
-    // Handle smart delete node using the same logic as MindMapPage
-    const handleDeleteNode = useCallback(() => {
-        log.debug('Smart deleting node:', id);
 
-        const nodes = getNodes();
-        const edges = getEdges();
-        const nodeToDelete = nodes.find(node => node.id === id);
-
-        if (!nodeToDelete) return;
-
-        // Find all edges that will be affected
-        const edgesToRemove = new Set();
-        const newEdgesToCreate = [];
-
-        // Find connections for the node to delete
-        const incomers = getIncomers(nodeToDelete, nodes, edges);
-        const outgoers = getOutgoers(nodeToDelete, nodes, edges);
-        const connectedEdges = getConnectedEdges([nodeToDelete], edges);
-
-        log.debug('Node to delete:', nodeToDelete.id, 'Incomers:', incomers, 'Outgoers:', outgoers, 'Connected edges:', connectedEdges);
-
-        // Mark edges for removal
-        connectedEdges.forEach(edge => edgesToRemove.add(edge.id));
-
-        // Plan new connections from incomers to outgoers
-        incomers.forEach(sourceNode => {
-            outgoers.forEach(targetNode => {
-                // Find the edge that connects sourceNode to the node being deleted
-                const sourceEdge = edges.find(edge =>
-                    edge.source === sourceNode.id && edge.target === nodeToDelete.id
-                );
-
-                // Find the edge that connects the node being deleted to targetNode
-                const targetEdge = edges.find(edge =>
-                    edge.source === nodeToDelete.id && edge.target === targetNode.id
-                );
-
-                newEdgesToCreate.push({
-                    sourceId: sourceNode.id,
-                    targetId: targetNode.id,
-                    sourceHandleId: sourceEdge?.sourceHandle || `${sourceNode.id}-source`,
-                    targetHandleId: targetEdge?.targetHandle || `${targetNode.id}-target`
-                });
-            });
-        });
-
-        log.debug('Smart delete plan:', {
-            nodeToDelete: id,
-            edgesToRemove: Array.from(edgesToRemove),
-            newEdgesToCreate
-        });
-
-        // Remove all affected edges from Redux
-        edgesToRemove.forEach(edgeId => {
-            dispatch(deleteEdge(edgeId));
-        });
-
-        // Create new edges in Redux
-        newEdgesToCreate.forEach(({ sourceId, targetId, sourceHandleId, targetHandleId }) => {
-            dispatch(connectNodes({
-                sourceNodeId: sourceId,
-                targetNodeId: targetId,
-                sourceHandleId: sourceHandleId,
-                targetHandleId: targetHandleId,
-                edgeType: 'default'
-            }));
-        });
-
-        // Remove the node from Redux
-        dispatch(deleteNode(id));
-    }, [dispatch, id, getNodes, getEdges]);
 
     // Handle simple delete node - just remove the node and its connections
     const handleSimpleDeleteNode = useCallback(() => {
@@ -221,6 +151,25 @@ const CustomNode = memo(({ id, selected, data }) => {
 
     const iconSize = getIconSize();
 
+    // Check which handles are connected
+    const checkHandleConnection = useCallback((handleId) => {
+        const edges = getEdges();
+        return edges.some(edge => edge.targetHandle === handleId);
+    }, [getEdges]);
+
+    // Check if a handle is connectable (only one connection allowed per target handle)
+    const isHandleConnectable = useCallback((handleId, handleType) => {
+        if (handleType === 'source') {
+            // Source handles can have multiple connections
+            return true;
+        }
+
+        // Target handles can only have one connection
+        const edges = getEdges();
+        const isConnected = edges.some(edge => edge.targetHandle === handleId);
+        return !isConnected;
+    }, [getEdges]);
+
     return (
         <>
             <div
@@ -267,49 +216,22 @@ const CustomNode = memo(({ id, selected, data }) => {
                     onResizeEnd={handleResizeEnd}
                 />
 
-                {/* Render handles based on handleConfig array */}
-                {data.handleConfig && data.handleConfig.length > 0 ? (
-                    // Use the handleConfig array to render handles
-                    data.handleConfig.map((handle, index) => (
-                        <Handle
-                            key={`${id}-${handle.id}`}
-                            id={handle.id}
-                            type={handle.type}
-                            position={handle.position === 'left' ? Position.Left : Position.Right}
-                        />
-                    ))
-                ) : (
-                    // Fallback for nodes without handleConfig - use old logic
-                    !data.parentId ? (
-                        // Root node - left is source, right is target (both can create nodes)
-                        <>
+
+                {
+                    data.handleConfig.map((handle, index) => {
+                        const isConnected = handle.type === 'target' && checkHandleConnection(handle.id);
+                        return (
                             <Handle
-                                id={`${id}-source-left`}
-                                type="source"
-                                position={Position.Left}
+                                key={`${id}-${handle.id}`}
+                                id={handle.id}
+                                type={handle.type}
+                                position={handle.position === 'left' ? Position.Left : Position.Right}
+                                isConnectable={isHandleConnectable(handle.id, handle.type)}
+                                className={isConnected ? 'handle-connected' : 'handle-not-connected'}
                             />
-                            <Handle
-                                id={`${id}-source-right`}
-                                type="source"
-                                position={Position.Right}
-                            />
-                        </>
-                    ) : (
-                        // Regular node - handle configuration based on node data
-                        <>
-                            <Handle
-                                id={`${id}-${data.node?.handleConfig?.leftHandleType || 'source'}`}
-                                type={data.node?.handleConfig?.leftHandleType || 'source'}
-                                position={Position.Left}
-                            />
-                            <Handle
-                                id={`${id}-${data.node?.handleConfig?.rightHandleType || 'target'}`}
-                                type={data.node?.handleConfig?.rightHandleType || 'target'}
-                                position={Position.Right}
-                            />
-                        </>
-                    )
-                )}
+                        );
+                    })
+                }
             </div>
 
             {/* Node Toolbar - only visible when selected and zoom level is appropriate */}

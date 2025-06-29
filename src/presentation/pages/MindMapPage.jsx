@@ -61,7 +61,6 @@ const MindMapContent = ({ mindMapId }) => {
         return currentMindMap.getAllNodes().map(node => ({
             id: node.id,
             type: 'custom',
-
             position: node.position,
             selected: node.id === selectedNodeId,// <-- highlight if selected
             data: {
@@ -181,6 +180,18 @@ const MindMapContent = ({ mindMapId }) => {
             }));
         } else if (connectionState.fromNode && connectionState.toNode) {
             log.debug("onConnectEnd", "Connecting nodes", connectionState.fromNode.id, connectionState.toNode.id)
+
+            // Check if target handle is already connected
+            const targetHandleId = connectionState.toHandle.id;
+            const isTargetHandleConnected = edgesFromRedux.some(edge =>
+                edge.targetHandle === targetHandleId
+            );
+
+            if (isTargetHandleConnected) {
+                log.debug("onConnectEnd", 'Cannot create connection - target handle already connected:', targetHandleId);
+                return;
+            }
+
             dispatch(connectNodes({
                 sourceNodeId: connectionState.fromNode.id,
                 targetNodeId: connectionState.toNode.id,
