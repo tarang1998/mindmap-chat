@@ -1,7 +1,7 @@
 import React, { useState, useRef, memo, useCallback, useEffect } from 'react';
-import { Handle, NodeResizeControl, NodeResizer, Position } from '@xyflow/react';
+import { Handle, NodeResizeControl, NodeResizer, NodeToolbar, Position, useViewport, useReactFlow, getIncomers, getOutgoers, getConnectedEdges } from '@xyflow/react';
 import { useAppDispatch } from '../../hooks/hooks.js';
-import { updateNode } from '../../store/mindMap/mindMapSlice.js';
+import { updateNode, deleteNode, connectNodes, deleteEdge } from '../../store/mindMap/mindMapSlice.js';
 import "./CustomNode.css"
 import log from "../../utils/logger.js"
 
@@ -16,6 +16,8 @@ const CustomNode = memo(({ id, selected, data }) => {
     const inputRef = useRef(null);
     const resizeTimeoutRef = useRef(null);
     const dispatch = useAppDispatch();
+    const { zoom } = useViewport();
+    const { getNodes, getEdges } = useReactFlow();
 
     // Update local dimensions when data changes
     useEffect(() => {
@@ -66,6 +68,64 @@ const CustomNode = memo(({ id, selected, data }) => {
         }
     }, [handleContentBlur, data.label]);
 
+    // Handle smart delete node using the same logic as MindMapPage
+    const handleDeleteNode = useCallback(() => {
+        log.debug('Smart deleting node:', id);
+
+        const nodes = getNodes();
+        const edges = getEdges();
+        const nodeToDelete = nodes.find(node => node.id === id);
+
+        if (!nodeToDelete) return;
+
+        // Find all edges that will be affected
+        const edgesToRemove = new Set();
+        const newEdgesToCreate = [];
+
+        // Find connections for the node to delete
+        const incomers = getIncomers(nodeToDelete, nodes, edges);
+        const outgoers = getOutgoers(nodeToDelete, nodes, edges);
+        const connectedEdges = getConnectedEdges([nodeToDelete], edges);
+
+        log.debug('Node to delete:', nodeToDelete.id, 'Incomers:', incomers, 'Outgoers:', outgoers, 'Connected edges:', connectedEdges);
+
+        // Mark edges for removal
+        connectedEdges.forEach(edge => edgesToRemove.add(edge.id));
+
+        // Plan new connections from incomers to outgoers
+        incomers.forEach(sourceNode => {
+            outgoers.forEach(targetNode => {
+                newEdgesToCreate.push({
+                    sourceId: sourceNode.id,
+                    targetId: targetNode.id
+                });
+            });
+        });
+
+        log.debug('Smart delete plan:', {
+            nodeToDelete: id,
+            edgesToRemove: Array.from(edgesToRemove),
+            newEdgesToCreate
+        });
+
+        // Remove all affected edges from Redux
+        edgesToRemove.forEach(edgeId => {
+            dispatch(deleteEdge(edgeId));
+        });
+
+        // Create new edges in Redux
+        newEdgesToCreate.forEach(({ sourceId, targetId }) => {
+            dispatch(connectNodes({
+                sourceNodeId: sourceId,
+                targetNodeId: targetId,
+                edgeType: 'default'
+            }));
+        });
+
+        // Remove the node from Redux
+        dispatch(deleteNode(id));
+    }, [dispatch, id, getNodes, getEdges]);
+
     // Optimized resize handler with debouncing
     const handleResize = useCallback((event, params) => {
         // Update local dimensions immediately for smooth visual feedback
@@ -73,7 +133,6 @@ const CustomNode = memo(({ id, selected, data }) => {
             width: params.width,
             height: params.height
         });
-
 
     }, [dispatch,]);
 
@@ -83,6 +142,7 @@ const CustomNode = memo(({ id, selected, data }) => {
         if (resizeTimeoutRef.current) {
             clearTimeout(resizeTimeoutRef.current);
         }
+
         // Final update with exact dimensions
         log.debug('Resize end - final update:', { id, width: params.width, height: params.height });
         dispatch(updateNode({
@@ -104,58 +164,130 @@ const CustomNode = memo(({ id, selected, data }) => {
         };
     }, []);
 
+    // Calculate icon size based on zoom level
+    const getIconSize = () => {
+        const baseSize = 14;
+        // Hide toolbar when zoomed out too much (zoom < 0.5)
+        if (zoom < 0.8) {
+            return null;
+        }
 
+        const scaledSize = Math.max(baseSize * zoom, 26); // Minimum 12px, scales inversely with zoom
+        return scaledSize;
+    };
 
+    const iconSize = getIconSize();
 
     return (
-        <div
-            className={`react-flow__node-default${selected ? ' selected-node' : ''}`}
-            style={{
-                width: localDimensions.width,
-                height: localDimensions.height,
-                justifyContent: 'center',
-                alignContent: 'center',
-                minWidth: '100px',
-                minHeight: '50px',
-                boxSizing: 'border-box',
-                transition: 'none', // Disable transitions during resize for better performance
-                position: 'relative'
-            }}
-        >
-            {isEditing ? (
-                <input
-                    ref={inputRef}
-                    type="text"
-                    value={editContent}
-                    onChange={handleContentChange}
-                    onBlur={handleContentBlur}
-                    onKeyDown={handleKeyDown}
-                    autoFocus
-                    style={{
-                        width: '100%',
-                        border: 'none',
-                        outline: 'none',
-                        background: 'transparent',
-                        font: 'inherit',
-                        textAlign: 'center'
-                    }}
+        <>
+            <div
+                className={`react-flow__node-default${selected ? ' selected-node' : ''}`}
+                style={{
+                    width: localDimensions.width,
+                    height: localDimensions.height,
+                    justifyContent: 'center',
+                    alignContent: 'center',
+                    minWidth: '100px',
+                    minHeight: '50px',
+                    boxSizing: 'border-box',
+                    transition: 'none', // Disable transitions during resize for better performance
+                    position: 'relative'
+                }}
+            >
+                {isEditing ? (
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={editContent}
+                        onChange={handleContentChange}
+                        onBlur={handleContentBlur}
+                        onKeyDown={handleKeyDown}
+                        autoFocus
+                        style={{
+                            width: '100%',
+                            border: 'none',
+                            outline: 'none',
+                            background: 'transparent',
+                            font: 'inherit',
+                            textAlign: 'center'
+                        }}
+                    />
+                ) : (
+                    <div onDoubleClick={handleDoubleClick}>{data.label || '[Empty]'}</div>
+                )}
+
+                <NodeResizer
+                    isVisible={selected}
+                    minWidth={100}
+                    minHeight={50}
+                    onResize={handleResize}
+                    onResizeEnd={handleResizeEnd}
                 />
-            ) : (
-                <div onDoubleClick={handleDoubleClick}>{data.label || '[Empty]'}</div>
+
+                <Handle type="target" position={Position.Left} />
+                <Handle type="source" position={Position.Right} />
+            </div>
+
+            {/* Node Toolbar - only visible when selected and zoom level is appropriate */}
+            {selected && iconSize && (
+                <NodeToolbar
+                    isVisible={selected}
+                    position={Position.Bottom}
+                    offset={7}
+                    align="center"
+                >
+                    <button
+                        onClick={handleDeleteNode}
+                        style={{
+                            width: `${iconSize}px`,
+                            height: `${iconSize}px`,
+                            border: 'none',
+                            background: 'rgba(255, 55, 66, 0.95)',
+                            borderRadius: '50%',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            fontSize: `${Math.max(iconSize, 8)}px`,
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                            transition: 'all 0.2s ease',
+                            backdropFilter: 'blur(4px)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.target.style.background = 'rgba(245, 41, 51, 0.95)';
+                            e.target.style.transform = 'scale(1.15)';
+                            e.target.style.boxShadow = '0 4px 12px rgba(255, 71, 87, 0.3)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.target.style.background = 'rgba(255, 55, 66, 0.95)';
+                            e.target.style.transform = 'scale(1)';
+                            e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+                        }}
+                        title="Delete Node"
+                    >
+                        <svg
+                            width={Math.max(iconSize * 0.6, 10)}
+                            height={Math.max(iconSize * 0.6, 10)}
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            color='rgba(0, 0, 0, 0.9)'
+                        >
+                            <path d="M3 6h18" />
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                            <line x1="10" y1="11" x2="10" y2="17" />
+                            <line x1="14" y1="11" x2="14" y2="17" />
+                        </svg>
+                    </button>
+                </NodeToolbar>
             )}
-
-
-            <NodeResizer
-                isVisible={selected}
-                minWidth={100}
-                minHeight={50}
-                onResize={handleResize}
-                onResizeEnd={handleResizeEnd}
-            />
-
-            <Handle type="target" position={Position.Left} />
-            <Handle type="source" position={Position.Right} />
-        </div>
+        </>
     );
 });
 
