@@ -152,14 +152,15 @@ const CustomNode = memo(({ id, selected, data }) => {
         return edges.some(edge => edge.targetHandle === handleId);
     }, [getEdges]);
 
-    // Check if a handle is connectable (only one connection allowed per target handle)
+    // Check if a handle is connectable (allow both source and target handles to initiate connections)
     const isHandleConnectable = useCallback((handleId, handleType) => {
         if (handleType === 'source') {
             // Source handles can have multiple connections
             return true;
         }
 
-        // Target handles can only have one connection
+        // Target handles can also initiate connections (will be normalized in Redux)
+        // But only if they're not already connected
         const edges = getEdges();
         const isConnected = edges.some(edge => edge.targetHandle === handleId);
         return !isConnected;

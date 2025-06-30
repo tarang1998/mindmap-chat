@@ -14,7 +14,7 @@
 
 
 
-/* Target handles - can receive connections */
+/* Target handles - can receive connections and also initiate them */
 .react-flow__handle[data-handletype="target"] {
     background-color: blue !important;
     border: 2px solid blue !important;
@@ -25,15 +25,16 @@
 
 /* Target handles that are already connected */
 .react-flow__handle[data-handletype="target"].handle-connected {
-    cursor: not-allowed !important;
     opacity: 1 !important;
     background-color: red !important;
     border: 2px solid red !important;
+    cursor: not-allowed !important;
+
 }
 
 /* Available target handles (not connected) */
 .react-flow__handle[data-handletype="target"].handle-not-connected {
-    cursor: not-allowed !important;
+    cursor: crosshair !important;
     opacity: 1 !important;
     background-color: blue !important;
     border: 2px solid blue !important;
