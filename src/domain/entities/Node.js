@@ -1,7 +1,8 @@
 export class Node {
-    constructor(id, content, position = { x: 0, y: 0 }, parentId = null) {
+    constructor(id, isRoot, content, position = { x: 0, y: 0 }, parentId = null) {
         this.id = id;
-        this.content = content;
+        this.isRoot = isRoot;
+        this.content = content || '';
         this.position = position;
         this.parentId = parentId;
         this.children = [];
@@ -30,7 +31,7 @@ export class Node {
     }
 
     updateContent(newContent) {
-        this.content = newContent;
+        this.content = newContent || '';
         this.updatedAt = new Date();
     }
 
@@ -63,19 +64,20 @@ export class Node {
 
     // Validation methods
     isValid() {
-        return this.id && this.content && this.content.trim().length > 0;
+        return this.id && this.content && typeof this.content === 'string' && this.content.trim().length > 0;
     }
 
     // Factory method
-    static create(content, position = { x: 0, y: 0 }, parentId = null) {
+    static create(isRoot = false, content, position = { x: 0, y: 0 }, parentId = null) {
         const id = `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        return new Node(id, content, position, parentId);
+        return new Node(id, isRoot, content, position, parentId);
     }
 
     // Serialization
     toJSON() {
         return {
             id: this.id,
+            isRoot: this.isRoot,
             content: this.content,
             position: this.position,
             parentId: this.parentId,
@@ -90,7 +92,7 @@ export class Node {
     }
 
     static fromJSON(data) {
-        const node = new Node(data.id, data.content, data.position, data.parentId);
+        const node = new Node(data.id, data.isRoot, data.content, data.position, data.parentId);
         node.children = data.children || [];
         node.createdAt = new Date(data.createdAt);
         node.updatedAt = new Date(data.updatedAt);

@@ -64,6 +64,7 @@ const MindMapContent = ({ mindMapId }) => {
             position: node.position,
             selected: node.id === selectedNodeId,// <-- highlight if selected
             data: {
+                isRoot: node.isRoot,
                 label: node.content,
                 node: node,
                 parentId: node.parentId,
@@ -132,42 +133,52 @@ const MindMapContent = ({ mindMapId }) => {
                 y: clientY,
             });
 
-            log.debug("onConnectEnd", 'Creating new node at drop position:', dropPosition);
 
             // Get the source handle ID from the connection state
             const sourceHandleId = connectionState.fromHandle.id;
 
+            // Validate that the fromHandle is actually a source handle
+            const sourceNode = nodes.find(node => node.id === connectionState.fromNode.id);
+            if (!sourceNode) {
+                log.debug("onConnectEnd", 'Source node not found');
+                return;
+            }
+
+            // Check if the handle is actually a source handle
+            const sourceHandle = sourceNode.data?.handleConfig?.find(handle => handle.id === sourceHandleId);
+            if (!sourceHandle || sourceHandle.type !== 'source') {
+                log.debug("onConnectEnd", 'Cannot start connection from target handle:', sourceHandleId);
+                return;
+            }
+
             // Determine handle configuration for the new node based on source handle
             let newNodeHandleConfig = null;
 
-            // Check if the source node is a root node (no parentId)
-            const sourceNode = nodes.find(node => node.id === connectionState.fromNode.id);
-            if (sourceNode) {
-                if (!sourceNode.data?.parentId) {
-                    if (sourceHandleId === `${connectionState.fromNode.id}-source-left`) {
-                        // From left handle of root node - new node should have left source, right target
-                        newNodeHandleConfig = {
-                            leftHandleType: 'source',
-                            rightHandleType: 'target'
-                        };
-                    } else if (sourceHandleId === `${connectionState.fromNode.id}-source-right`) {
-                        // From right handle of root node - new node should have right source, left target
-                        newNodeHandleConfig = {
-                            leftHandleType: 'target',
-                            rightHandleType: 'source'
-                        };
-                    }
-                } else {
-                    // Non-root node - inherit handle config from parent node
+            // Check if the source node is a root node
+            if (sourceNode.data?.isRoot) {
+                if (sourceHandleId === `${connectionState.fromNode.id}-source-left`) {
+                    // From left handle of root node - new node should have left source, right target
                     newNodeHandleConfig = {
-                        leftHandleType: sourceNode.data.handleConfig[0].type,
-                        rightHandleType: sourceNode.data.handleConfig[1].type
-                    }
-
+                        leftHandleType: 'source',
+                        rightHandleType: 'target'
+                    };
+                } else if (sourceHandleId === `${connectionState.fromNode.id}-source-right`) {
+                    // From right handle of root node - new node should have right source, left target
+                    newNodeHandleConfig = {
+                        leftHandleType: 'target',
+                        rightHandleType: 'source'
+                    };
                 }
-                // Root node - determine handle config based on source handle
-
+            } else {
+                // Non-root node - inherit handle config from parent node
+                newNodeHandleConfig = {
+                    leftHandleType: sourceNode.data.handleConfig[0].type,
+                    rightHandleType: sourceNode.data.handleConfig[1].type
+                }
             }
+
+            log.debug("onConnectEnd", 'Creating new node at drop position:', dropPosition);
+
 
             // Create a new node at the exact drop position with connection
             dispatch(addNodeWithConnection({
@@ -180,6 +191,24 @@ const MindMapContent = ({ mindMapId }) => {
             }));
         } else if (connectionState.fromNode && connectionState.toNode) {
             log.debug("onConnectEnd", "Connecting nodes", connectionState.fromNode.id, connectionState.toNode.id)
+
+            // Validate that the fromHandle is actually a source handle
+            const sourceNode = nodes.find(node => node.id === connectionState.fromNode.id);
+            const sourceHandle = sourceNode?.data?.handleConfig?.find(handle => handle.id === connectionState.fromHandle.id);
+
+            if (!sourceHandle || sourceHandle.type !== 'source') {
+                log.debug("onConnectEnd", 'Cannot start connection from target handle:', connectionState.fromHandle.id);
+                return;
+            }
+
+            // Validate that the toHandle is actually a target handle
+            const targetNode = nodes.find(node => node.id === connectionState.toNode.id);
+            const targetHandle = targetNode?.data?.handleConfig?.find(handle => handle.id === connectionState.toHandle.id);
+
+            if (!targetHandle || targetHandle.type !== 'target') {
+                log.debug("onConnectEnd", 'Cannot connect to source handle:', connectionState.toHandle.id);
+                return;
+            }
 
             // Check if target handle is already connected
             const targetHandleId = connectionState.toHandle.id;
@@ -199,9 +228,8 @@ const MindMapContent = ({ mindMapId }) => {
                 targetHandleId: connectionState.toHandle.id,
                 edgeType: 'default'
             }));
-
         }
-    }, [screenToFlowPosition, dispatch, nodes, edges]);
+    }, [screenToFlowPosition, dispatch, nodes, edgesFromRedux]);
 
 
     const onNodeClick = useCallback((event, node) => {

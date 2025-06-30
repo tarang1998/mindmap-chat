@@ -93,7 +93,7 @@ export class ImportMindMapUseCase {
             const level = match[1].length / 2;
             const content = match[2];
 
-            const node = Node.create(content);
+            const node = Node.create(false, content);
             mindMap.addNode(node);
 
             if (level === 0) {

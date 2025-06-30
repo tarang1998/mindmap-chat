@@ -223,6 +223,8 @@ const CustomNode = memo(({ id, selected, data }) => {
                                 position={handle.position === 'left' ? Position.Left : Position.Right}
                                 isConnectable={isHandleConnectable(handle.id, handle.type)}
                                 className={isConnected ? 'handle-connected' : 'handle-not-connected'}
+                                data-handletype={handle.type}
+                                data-handlepos={handle.position}
                             />
                         );
                     })

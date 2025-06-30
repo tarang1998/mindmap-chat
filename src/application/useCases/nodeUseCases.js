@@ -12,7 +12,7 @@ export class AddNodeUseCase {
                 throw new Error('Mind map not found');
             }
 
-            const node = Node.create(content, position, parentId);
+            const node = Node.create(false, content, position, parentId);
             mindMap.addNode(node);
 
             const savedMindMap = await this.mindMapRepository.save(mindMap);

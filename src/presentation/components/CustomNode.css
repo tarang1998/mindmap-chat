@@ -3,17 +3,38 @@
     border: 1px solid #007bff;
 }
 
+/* Source handles - can initiate connections */
+.react-flow__handle[data-handletype="source"] {
+    background-color: green !important;
+    border: 2px solid green !important;
+    cursor: crosshair !important;
+    opacity: 1 !important;
+}
+
+
+
+
+/* Target handles - can receive connections */
+.react-flow__handle[data-handletype="target"] {
+    background-color: blue !important;
+    border: 2px solid blue !important;
+    cursor: crosshair !important;
+    opacity: 1 !important;
+}
 
 
 /* Target handles that are already connected */
-.react-flow__handle.handle-connected {
+.react-flow__handle[data-handletype="target"].handle-connected {
     cursor: not-allowed !important;
-    opacity: 1;
+    opacity: 1 !important;
     background-color: red !important;
+    border: 2px solid red !important;
 }
 
-.react-flow__handle.handle-not-connected {
-    cursor: crosshair !important;
-    opacity: 1;
-    background-color: green !important;
+/* Available target handles (not connected) */
+.react-flow__handle[data-handletype="target"].handle-not-connected {
+    cursor: not-allowed !important;
+    opacity: 1 !important;
+    background-color: blue !important;
+    border: 2px solid blue !important;
 }

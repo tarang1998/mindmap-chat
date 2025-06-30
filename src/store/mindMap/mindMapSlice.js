@@ -13,7 +13,7 @@ export const createMindMap = createAsyncThunk(
             // Create a new mind map with the given id
             const mindMap = new MindMap(id, 'Untitled Mind Map');
 
-            const node = Node.create('Node', { x: 250, y: 100 }, null);
+            const node = Node.create(true, 'Node', { x: 250, y: 100 }, null);
             node.setHandleConfig([
                 { id: `${node.id}-source-left`, type: 'source', position: 'left' },
                 { id: `${node.id}-source-right`, type: 'source', position: 'right' },])
@@ -47,24 +47,6 @@ export const saveMindMap = createAsyncThunk(
     }
 );
 
-export const addNode = createAsyncThunk(
-    'mindMap/addNode',
-    async ({ content, position, parentId }, { getState, rejectWithValue }) => {
-        try {
-            const { mindMap } = getState();
-            if (!mindMap.currentMindMap) {
-                throw new Error('No mind map loaded');
-            }
-
-            const node = Node.create(content, position, parentId);
-            mindMap.currentMindMap.addNode(node);
-
-            return { node: node.toJSON(), mindMap: mindMap.currentMindMap.toJSON() };
-        } catch (error) {
-            return rejectWithValue(error.message);
-        }
-    }
-);
 
 export const updateNode = createAsyncThunk(
     'mindMap/updateNode',
@@ -157,7 +139,7 @@ export const addNodeWithConnection = createAsyncThunk(
             }
 
             // Create the new node
-            const node = Node.create(content, position, parentId);
+            const node = Node.create(false, content, position, parentId);
 
             let nodeHandleConfigs = []
             if (handleConfig.leftHandleType == "source") {
@@ -329,21 +311,6 @@ const mindMapSlice = createSlice({
                 state.error = action.payload;
             })
 
-            // Add Node
-            .addCase(addNode.pending, (state) => {
-                state.loading = true;
-                state.error = null;
-            })
-            .addCase(addNode.fulfilled, (state, action) => {
-                state.loading = false;
-                state.currentMindMap = action.payload.mindMap ? MindMap.fromJSON(action.payload.mindMap) : null;
-                state.selectedNodeId = action.payload.node.id;
-                state.hasUnsavedChanges = true;
-            })
-            .addCase(addNode.rejected, (state, action) => {
-                state.loading = false;
-                state.error = action.payload;
-            })
 
             // Update Node
             .addCase(updateNode.pending, (state) => {
