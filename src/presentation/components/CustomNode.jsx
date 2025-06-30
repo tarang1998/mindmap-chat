@@ -240,7 +240,7 @@ const CustomNode = memo(({ id, selected, data }) => {
                     align="center"
                 >
                     {/* Only show delete button for non-root nodes */}
-                    {data.parentId && (
+                    {!data.isRoot && (
                         <button
                             onClick={handleSimpleDeleteNode}
                             style={{

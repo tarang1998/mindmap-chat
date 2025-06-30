@@ -14,6 +14,7 @@ import {
     getIncomers,
     getOutgoers,
     getConnectedEdges,
+    useStoreApi,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useAppSelector, useAppDispatch } from '../../hooks/hooks.js';
@@ -44,14 +45,17 @@ import log from "../../utils/logger.js"
 
 const MindMapContent = ({ mindMapId }) => {
     const dispatch = useAppDispatch();
+    const store = useStoreApi();
 
     const { currentMindMap, selectedNodeId, loading, error } = useAppSelector(state => state.mindMap);
     const { zoom, pan } = useAppSelector(state => state.ui);
 
     const reactFlowWrapper = useRef(null);
     const viewportUpdateTimeoutRef = useRef(null);
-    const { screenToFlowPosition } = useReactFlow();
+    const { screenToFlowPosition, getInternalNode } = useReactFlow();
 
+    // Proximity connect constants
+    const MIN_DISTANCE = 300;
 
     // Memoize nodes and edges to prevent unnecessary re-renders
     const nodesFromRedux = useMemo(() => {
@@ -111,12 +115,6 @@ const MindMapContent = ({ mindMapId }) => {
             dispatch(setPan({ x: viewport.x, y: viewport.y }));
             dispatch(setZoom(viewport.zoom));
         }, 16); // ~60fps
-    }, [dispatch]);
-
-
-    const onNodeDragStop = useCallback((_, node) => {
-        log.debug("onNodeDragStop", _, node)
-        dispatch(updateNode({ nodeId: node.id, updates: { position: node.position } }));
     }, [dispatch]);
 
 
@@ -437,6 +435,233 @@ const MindMapContent = ({ mindMapId }) => {
 
     const hasValidMindMap = currentMindMap && typeof currentMindMap.getAllNodes === 'function';
 
+    // Get closest edge for proximity connect
+    const getClosestEdge = useCallback((node) => {
+        const { nodeLookup } = store.getState();
+        const internalNode = getInternalNode(node.id);
+
+        // Get the dragged node's handles
+        const draggedNode = nodes.find(n => n.id === node.id);
+        if (!draggedNode) return null;
+
+        const draggedSourceHandles = draggedNode.data?.handleConfig?.filter(h => h.type === 'source') || [];
+        const draggedTargetHandles = draggedNode.data?.handleConfig?.filter(h => h.type === 'target') || [];
+
+        // Find all other nodes with their handles
+        const otherNodes = nodes.filter(n => n.id !== node.id);
+
+        let closestConnection = null;
+        let minDistance = Number.MAX_VALUE;
+
+        // Check each other node for potential connections
+        for (const otherNode of otherNodes) {
+            const otherNodeInternal = nodeLookup.get(otherNode.id);
+            if (!otherNodeInternal) continue;
+
+            const dx = otherNodeInternal.internals.positionAbsolute.x - internalNode.internals.positionAbsolute.x;
+            const dy = otherNodeInternal.internals.positionAbsolute.y - internalNode.internals.positionAbsolute.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance >= MIN_DISTANCE) continue;
+
+            const otherSourceHandles = otherNode.data?.handleConfig?.filter(h => h.type === 'source') || [];
+            const otherTargetHandles = otherNode.data?.handleConfig?.filter(h => h.type === 'target') || [];
+
+            // Filter out already connected target handles
+            const availableOtherTargetHandles = otherTargetHandles.filter(handle => {
+                return !edgesFromRedux.some(edge => edge.targetHandle === handle.id);
+            });
+
+            const availableDraggedTargetHandles = draggedTargetHandles.filter(handle => {
+                return !edgesFromRedux.some(edge => edge.targetHandle === handle.id);
+            });
+
+            // Determine direction of approach
+            const draggedNodeApproachingFromLeft = otherNodeInternal.internals.positionAbsolute.x > internalNode.internals.positionAbsolute.x;
+
+            // Try different connection combinations
+            const connectionOptions = [];
+
+            // Option 1: Dragged node source -> Other node target
+            if (draggedSourceHandles.length > 0 && availableOtherTargetHandles.length > 0) {
+                let selectedSourceHandle = null;
+                let selectedTargetHandle = null;
+
+
+                if (draggedNode.data?.isRoot) {
+                    // For root nodes: use direction-appropriate source handle
+                    if (draggedNodeApproachingFromLeft) {
+                        selectedSourceHandle = draggedSourceHandles.find(h => h.position == 'right');
+                    } else {
+                        selectedSourceHandle = draggedSourceHandles.find(h => h.position == 'left');
+                    }
+                } else {
+                    selectedSourceHandle = draggedSourceHandles[0];
+                }
+
+
+                if (otherNode.data?.isRoot) {
+                    // For root nodes: use direction-appropriate target handle
+                    if (draggedNodeApproachingFromLeft) {
+                        selectedTargetHandle = availableOtherTargetHandles.find(h => h.position === 'left');
+                    } else {
+                        selectedTargetHandle = availableOtherTargetHandles.find(h => h.position === 'right');
+                    }
+                } else {
+                    selectedTargetHandle = availableOtherTargetHandles[0];
+                }
+
+                if (selectedSourceHandle && selectedTargetHandle) {
+                    connectionOptions.push({
+                        source: draggedNode.id,
+                        target: otherNode.id,
+                        sourceHandle: selectedSourceHandle.id,
+                        targetHandle: selectedTargetHandle.id,
+                        distance
+                    });
+                }
+            }
+
+            // Option 2: Other node source -> Dragged node target
+            if (otherSourceHandles.length > 0 && availableDraggedTargetHandles.length > 0) {
+                let selectedSourceHandle = null;
+                let selectedTargetHandle = null;
+
+                if (otherNode.data?.isRoot) {
+                    // For root nodes: use direction-appropriate source handle
+                    if (draggedNodeApproachingFromLeft) {
+                        selectedSourceHandle = otherSourceHandles.find(h => h.position === 'left');
+                    } else {
+                        selectedSourceHandle = otherSourceHandles.find(h => h.position === 'right');
+                    }
+                } else {
+                    selectedSourceHandle = otherSourceHandles[0];
+                }
+
+                if (draggedNode.data?.isRoot) {
+                    // For root nodes: use direction-appropriate target handle
+                    if (draggedNodeApproachingFromLeft) {
+                        selectedTargetHandle = availableDraggedTargetHandles.find(h => h.position === 'left');
+                    } else {
+                        selectedTargetHandle = availableDraggedTargetHandles.find(h => h.position === 'right');
+                    }
+                } else {
+                    selectedTargetHandle = availableDraggedTargetHandles[0];
+                }
+
+                if (selectedSourceHandle && selectedTargetHandle) {
+                    connectionOptions.push({
+                        source: otherNode.id,
+                        target: draggedNode.id,
+                        sourceHandle: selectedSourceHandle.id,
+                        targetHandle: selectedTargetHandle.id,
+                        distance
+                    });
+                }
+            }
+
+            // Find the closest connection option for this node
+            for (const option of connectionOptions) {
+                if (option.distance < minDistance) {
+                    minDistance = option.distance;
+                    closestConnection = option;
+                }
+            }
+        }
+
+        if (!closestConnection) {
+            log.debug("getClosestEdge", "No valid connections found");
+            return null;
+        }
+
+        log.debug("getClosestEdge", "Creating edge", {
+            ...closestConnection,
+            draggedNodeId: node.id,
+            draggedNodeIsRoot: draggedNode.data?.isRoot
+        });
+
+        return {
+            id: `${closestConnection.source}-${closestConnection.target}`,
+            source: closestConnection.source,
+            target: closestConnection.target,
+            sourceHandle: closestConnection.sourceHandle,
+            targetHandle: closestConnection.targetHandle,
+        };
+    }, [store, getInternalNode, nodes, edgesFromRedux]);
+
+    // Handle node drag for proximity connect
+    const onNodeDrag = useCallback(
+        (_, node) => {
+
+            log.debug("onNodeDrag", _, node)
+
+            const closeEdge = getClosestEdge(node);
+
+            setEdges((es) => {
+                const nextEdges = es.filter((e) => e.className !== 'temp');
+
+                if (
+                    closeEdge &&
+                    !nextEdges.find(
+                        (ne) =>
+                            ne.source === closeEdge.source &&
+                            ne.target === closeEdge.target &&
+                            ne.sourceHandle === closeEdge.sourceHandle &&
+                            ne.targetHandle === closeEdge.targetHandle,
+                    )
+                ) {
+                    closeEdge.className = 'temp';
+
+                    nextEdges.push(closeEdge);
+                }
+
+                return nextEdges;
+            });
+        },
+        [getClosestEdge, setEdges],
+    );
+
+    // Handle node drag stop for proximity connect
+    const onNodeDragStop = useCallback(
+        (_, node) => {
+            // Update node position
+            dispatch(updateNode({ nodeId: node.id, updates: { position: node.position } }));
+
+            // Handle proximity connect
+            const closeEdge = getClosestEdge(node);
+
+            console.log("onNodeDragStop", closeEdge)
+
+            const nextEdges = edges.filter((e) => e.className !== 'temp');
+
+            if (
+                closeEdge &&
+                !nextEdges.find(
+                    (ne) =>
+                        ne.source === closeEdge.source &&
+                        ne.target === closeEdge.target &&
+                        ne.sourceHandle === closeEdge.sourceHandle &&
+                        ne.targetHandle === closeEdge.targetHandle,
+                )
+            ) {
+
+                console.log("onNodeDragStop", "creating Edge", closeEdge)
+
+                // Create the connection
+                dispatch(connectNodes({
+                    sourceNodeId: closeEdge.source,
+                    targetNodeId: closeEdge.target,
+                    sourceHandleId: closeEdge.sourceHandle,
+                    targetHandleId: closeEdge.targetHandle,
+                    edgeType: 'default'
+                }));
+            }
+
+
+        },
+        [getClosestEdge, dispatch],
+    );
+
     return (
         <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ flex: 1, position: 'relative' }} ref={reactFlowWrapper}>
@@ -455,6 +680,7 @@ const MindMapContent = ({ mindMapId }) => {
                         onSelectionChange={handleOnSelectionChange}
                         onPaneClick={onPaneClick}
                         onNodeDragStop={onNodeDragStop}
+                        onNodeDrag={onNodeDrag}
                         onMove={onMove}
                         onMoveEnd={onMoveEnd}
                         defaultViewport={{ x: pan.x, y: pan.y, zoom: zoom }}
