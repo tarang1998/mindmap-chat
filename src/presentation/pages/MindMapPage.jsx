@@ -94,7 +94,9 @@ const MindMapContent = ({ mindMapId }) => {
             targetHandle: edge.targetHandleId,
             type: edge.type,
             style: edge.style,
-            data: { edge: edge }
+            data: { edge: edge },
+            animated: true,
+
         }));
     }, [currentMindMap]);
 
@@ -576,49 +578,17 @@ const MindMapContent = ({ mindMapId }) => {
                 }
             }
 
-            // Option 3: Dragged node target -> Other node source (will be normalized)
-            if (draggedTargetHandles.length > 0 && otherSourceHandles.length > 0) {
-                let selectedTargetHandle = null;
-                let selectedSourceHandle = null;
-
-                if (draggedNode.data?.isRoot) {
-                    // For root nodes: use direction-appropriate target handle
-                    if (draggedNodeApproachingFromLeft) {
-                        selectedTargetHandle = draggedTargetHandles.find(h => h.position === 'left');
-                    } else {
-                        selectedTargetHandle = draggedTargetHandles.find(h => h.position === 'right');
-                    }
-                } else {
-                    selectedTargetHandle = draggedTargetHandles[0];
-                }
-
-                if (otherNode.data?.isRoot) {
-                    // For root nodes: use direction-appropriate source handle
-                    if (draggedNodeApproachingFromLeft) {
-                        selectedSourceHandle = otherSourceHandles.find(h => h.position === 'left');
-                    } else {
-                        selectedSourceHandle = otherSourceHandles.find(h => h.position === 'right');
-                    }
-                } else {
-                    selectedSourceHandle = otherSourceHandles[0];
-                }
-
-                if (selectedTargetHandle && selectedSourceHandle) {
-                    // Note: This will be normalized in onConnectEnd
-                    connectionOptions.push({
-                        source: draggedNode.id,  // Will be swapped to otherNode.id
-                        target: otherNode.id,    // Will be swapped to draggedNode.id
-                        sourceHandle: selectedTargetHandle.id,  // Will be swapped to selectedSourceHandle.id
-                        targetHandle: selectedSourceHandle.id,  // Will be swapped to selectedTargetHandle.id
-                        distance,
-                        needsNormalization: true
-                    });
-                }
-            }
-
             // Find the closest connection option for this node
             for (const option of connectionOptions) {
-                if (option.distance < minDistance) {
+                // Check if this edge already exists
+                const alreadyExists = edgesFromRedux.some(
+                    (e) =>
+                        e.source === option.source &&
+                        e.target === option.target &&
+                        e.sourceHandle === option.sourceHandle &&
+                        e.targetHandle === option.targetHandle
+                );
+                if (option.distance < minDistance && !alreadyExists) {
                     minDistance = option.distance;
                     closestConnection = option;
                 }
@@ -702,49 +672,12 @@ const MindMapContent = ({ mindMapId }) => {
             ) {
                 console.log("onNodeDragStop", "creating Edge", closeEdge)
 
-                // Normalize the connection if needed
-                let sourceNodeId, targetNodeId, sourceHandleId, targetHandleId;
-
-                // Check if this is a target->source connection that needs normalization
-                const draggedNode = nodes.find(n => n.id === node.id);
-                const otherNode = nodes.find(n => n.id !== node.id);
-
-                if (draggedNode && otherNode) {
-                    const draggedHandle = draggedNode.data?.handleConfig?.find(h => h.id === closeEdge.sourceHandle);
-                    const otherHandle = otherNode.data?.handleConfig?.find(h => h.id === closeEdge.targetHandle);
-
-                    if (draggedHandle?.type === 'target' && otherHandle?.type === 'source') {
-                        // Normalize: swap source and target
-                        sourceNodeId = closeEdge.target;  // The node with source handle
-                        targetNodeId = closeEdge.source;  // The node with target handle
-                        sourceHandleId = closeEdge.targetHandle;  // The source handle
-                        targetHandleId = closeEdge.sourceHandle;  // The target handle
-
-                        console.log("onNodeDragStop", "Normalizing connection:", {
-                            original: { source: closeEdge.source, target: closeEdge.target },
-                            normalized: { source: sourceNodeId, target: targetNodeId }
-                        });
-                    } else {
-                        // Normal connection
-                        sourceNodeId = closeEdge.source;
-                        targetNodeId = closeEdge.target;
-                        sourceHandleId = closeEdge.sourceHandle;
-                        targetHandleId = closeEdge.targetHandle;
-                    }
-                } else {
-                    // Fallback to original values
-                    sourceNodeId = closeEdge.source;
-                    targetNodeId = closeEdge.target;
-                    sourceHandleId = closeEdge.sourceHandle;
-                    targetHandleId = closeEdge.targetHandle;
-                }
-
                 // Create the connection
                 dispatch(connectNodes({
-                    sourceNodeId: sourceNodeId,
-                    targetNodeId: targetNodeId,
-                    sourceHandleId: sourceHandleId,
-                    targetHandleId: targetHandleId,
+                    sourceNodeId: closeEdge.source,
+                    targetNodeId: closeEdge.target,
+                    sourceHandleId: closeEdge.sourceHandle,
+                    targetHandleId: closeEdge.targetHandle,
                     edgeType: 'default'
                 }));
             }

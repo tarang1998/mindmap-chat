@@ -6,7 +6,7 @@
 /* Source handles - can initiate connections */
 .react-flow__handle[data-handletype="source"] {
     background-color: green !important;
-    border: 2px solid green !important;
+    /* border: 0.5px solid green !important; */
     cursor: crosshair !important;
     opacity: 1 !important;
 }
@@ -17,7 +17,7 @@
 /* Target handles - can receive connections and also initiate them */
 .react-flow__handle[data-handletype="target"] {
     background-color: blue !important;
-    border: 2px solid blue !important;
+    /* border: 1px solid blue !important; */
     cursor: crosshair !important;
     opacity: 1 !important;
 }
@@ -27,7 +27,7 @@
 .react-flow__handle[data-handletype="target"].handle-connected {
     opacity: 1 !important;
     background-color: red !important;
-    border: 2px solid red !important;
+    /* border: 1px solid red !important; */
     cursor: not-allowed !important;
 
 }
@@ -37,5 +37,5 @@
     cursor: crosshair !important;
     opacity: 1 !important;
     background-color: blue !important;
-    border: 2px solid blue !important;
+    /* border: 2px solid blue !important; */
 }
