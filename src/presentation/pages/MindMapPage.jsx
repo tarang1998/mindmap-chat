@@ -44,6 +44,7 @@ import log from "../../utils/logger.js"
 
 
 const MindMapContent = ({ mindMapId }) => {
+    log.debug("MindMapContent rendered");
     const dispatch = useAppDispatch();
     const store = useStoreApi();
 
@@ -54,11 +55,15 @@ const MindMapContent = ({ mindMapId }) => {
     const viewportUpdateTimeoutRef = useRef(null);
     const { screenToFlowPosition, getInternalNode } = useReactFlow();
 
+    // Add ref to track edge reconnection success
+    const edgeReconnectSuccessful = useRef(true);
+
     // Proximity connect constants
     const MIN_DISTANCE = 300;
 
     // Memoize nodes and edges to prevent unnecessary re-renders
     const nodesFromRedux = useMemo(() => {
+        log.debug("ComputingnodesFromRedux")
         if (!currentMindMap) {
             return [];
         }
@@ -83,6 +88,7 @@ const MindMapContent = ({ mindMapId }) => {
 
 
     const edgesFromRedux = useMemo(() => {
+        log.debug("ComputingedgesFromRedux")
         if (!currentMindMap) {
             return [];
         }
@@ -106,6 +112,15 @@ const MindMapContent = ({ mindMapId }) => {
     const [nodes, setNodes, onNodesChange] = useNodesState(nodesFromRedux);
     const [edges, setEdges, onEdgesChange] = useEdgesState(edgesFromRedux);
 
+    useEffect(() => {
+        setEdges(edgesFromRedux);
+    }, [edgesFromRedux, setEdges]);
+
+
+
+    log.debug("edges", edges, "edgesFromRedux", edgesFromRedux)
+    log.debug("nodes", nodes, "nodesFromRedux", nodesFromRedux)
+
     const nodeTypes = useMemo(() => ({ custom: CustomNode }), []);
 
     // Debounced viewport update function
@@ -120,8 +135,14 @@ const MindMapContent = ({ mindMapId }) => {
     }, [dispatch]);
 
 
+
     const onConnectEnd = useCallback((event, connectionState) => {
         log.debug("onConnectEnd", { event, connectionState })
+
+        if (edgeReconnectSuccessful.current === false) {
+            log.debug("onConnectEnd", "Edge reconnection failed, not performing any action")
+            return;
+        }
 
         // Check if we have a connection start but no valid target (dropped on pane)
         if (connectionState.fromNode && !connectionState.toNode) {
@@ -427,6 +448,8 @@ const MindMapContent = ({ mindMapId }) => {
         });
     }, [nodes, edges, dispatch]);
 
+
+    // Causes circular updates - can use useEffect to sync local state with Redux
     const handleOnSelectionChange = useCallback((obj) => {
         log.debug("handleOnSelectionChange", obj);
 
@@ -685,6 +708,38 @@ const MindMapContent = ({ mindMapId }) => {
         [getClosestEdge, dispatch, nodes, edges],
     );
 
+    // Add edge reconnection handlers
+    const onReconnectStart = useCallback(() => {
+        log.debug("onReconnectStart")
+        edgeReconnectSuccessful.current = false;
+    }, []);
+
+    const onReconnect = useCallback((oldEdge, newConnection) => {
+        log.debug("onReconnect", oldEdge, newConnection)
+        edgeReconnectSuccessful.current = true;
+
+        // First delete the old edge
+        dispatch(deleteEdge(oldEdge.id));
+
+        // Then create the new connection
+        dispatch(connectNodes({
+            sourceNodeId: newConnection.source,
+            targetNodeId: newConnection.target,
+            sourceHandleId: newConnection.sourceHandle,
+            targetHandleId: newConnection.targetHandle,
+            edgeType: 'default'
+        }));
+    }, [dispatch]);
+
+    const onReconnectEnd = useCallback((_, edge) => {
+        log.debug("onReconnectEnd", _, edge)
+        if (!edgeReconnectSuccessful.current) {
+            // If reconnection was not successf
+            dispatch(deleteEdge(edge.id));
+        }
+        edgeReconnectSuccessful.current = true;
+    }, [dispatch, edges]);
+
     return (
         <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ flex: 1, position: 'relative' }} ref={reactFlowWrapper}>
@@ -706,6 +761,9 @@ const MindMapContent = ({ mindMapId }) => {
                         onNodeDrag={onNodeDrag}
                         onMove={onMove}
                         onMoveEnd={onMoveEnd}
+                        onReconnectStart={onReconnectStart}
+                        onReconnect={onReconnect}
+                        onReconnectEnd={onReconnectEnd}
                         defaultViewport={{ x: pan.x, y: pan.y, zoom: zoom }}
                         minZoom={0.1}
                         maxZoom={3}
