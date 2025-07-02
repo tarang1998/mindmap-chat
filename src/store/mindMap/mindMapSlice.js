@@ -4,6 +4,7 @@ import { Node } from '../../domain/entities/Node.js';
 import { Edge } from '../../domain/entities/Edge.js';
 import log from "../../utils/logger.js"
 import { getIncomers, getOutgoers, getConnectedEdges } from '@xyflow/react';
+import { supabase } from '../../utils/supabase.js';
 
 // Async thunks for API operations
 export const createMindMap = createAsyncThunk(
@@ -13,11 +14,59 @@ export const createMindMap = createAsyncThunk(
             // Create a new mind map with the given id
             const mindMap = new MindMap(id, 'Untitled Mind Map');
 
-            const node = Node.create(true, 'Node', { x: 250, y: 100 }, null);
+            const node = Node.create(true, 'Root', { x: 250, y: 100 }, null);
             node.setHandleConfig([
                 { id: `${node.id}-source-left`, type: 'source', position: 'left' },
                 { id: `${node.id}-source-right`, type: 'source', position: 'right' },])
             mindMap.addNode(node);
+
+            // --- Supabase upsert mindmap ---
+            try {
+                const mindmapData = {
+                    id: mindMap.id,
+                    title: mindMap.title,
+                    created_at: mindMap.createdAt.toISOString(),
+                    updated_at: new Date().toISOString()
+                };
+                log.debug('Upserting mindmap data:', mindmapData);
+                const { error } = await supabase.from('mindmaps').upsert(mindmapData);
+                if (error) {
+                    log.error('Supabase mindmap upsert error:', error);
+                    throw new Error(`Failed to upsert mindmap: ${error.message}`);
+                }
+            } catch (supabaseError) {
+                log.error('Supabase mindmap operation failed:', supabaseError);
+                throw supabaseError;
+            }
+            // ---
+
+            // --- Supabase upsert root node ---
+            try {
+                const rootNodeData = {
+                    id: node.id,
+                    mindmap_id: mindMap.id,
+                    content: node.content,
+                    position_x: node.position.x,
+                    position_y: node.position.y,
+                    parent_id: node.parentId,
+                    is_root: node.isRoot,
+                    handle_config: node.handleConfig,
+                    width: node.width,
+                    height: node.height,
+                    created_at: node.createdAt.toISOString(),
+                    updated_at: new Date().toISOString()
+                };
+                log.debug('Upserting root node data:', rootNodeData);
+                const { error } = await supabase.from('nodes').upsert(rootNodeData);
+                if (error) {
+                    log.error('Supabase root node upsert error:', error);
+                    throw new Error(`Failed to upsert root node: ${error.message}`);
+                }
+            } catch (supabaseError) {
+                log.error('Supabase root node operation failed:', supabaseError);
+                throw supabaseError;
+            }
+            // ---
 
             return mindMap.toJSON();
         } catch (error) {
@@ -28,24 +77,103 @@ export const createMindMap = createAsyncThunk(
 
 export const loadMindMap = createAsyncThunk(
     'mindMap/loadMindMap',
-
     async (mindMapId, { rejectWithValue }) => {
-        // For now, return null - will be implemented with repository later
-        return null;
-    }
-);
-
-export const saveMindMap = createAsyncThunk(
-    'mindMap/saveMindMap',
-    async (mindMap, { rejectWithValue }) => {
         try {
-            // For now, just return the mind map - will be implemented with repository later
-            return mindMap;
+            log.debug('Loading mind map with ID:', mindMapId);
+
+            // Fetch mindmap
+            const { data: mindmapData, error: mindmapError } = await supabase
+                .from('mindmaps')
+                .select('*')
+                .eq('id', mindMapId)
+                .single();
+
+            log.debug('Mindmap query result:', { mindmapData, mindmapError });
+
+            if (mindmapError && mindmapError.code !== 'PGRST116') {
+                log.error('Failed to fetch mind map:', mindmapError);
+                throw new Error(`Failed to fetch mind map: ${mindmapError.message}`);
+            }
+            if (!mindmapData) {
+                log.debug('No mind map found, returning null');
+                // Return null to allow createMindMap to proceed
+                return null;
+            }
+
+            // Fetch nodes
+            const { data: nodesData, error: nodesError } = await supabase
+                .from('nodes')
+                .select('*')
+                .eq('mindmap_id', mindMapId);
+
+            log.debug('Nodes query result:', { nodesData, nodesError });
+
+            if (nodesError) {
+                log.error('Failed to fetch nodes:', nodesError);
+                throw new Error(`Failed to fetch nodes: ${nodesError.message}`);
+            }
+
+            // Fetch edges
+            const { data: edgesData, error: edgesError } = await supabase
+                .from('edges')
+                .select('*')
+                .eq('mindmap_id', mindMapId);
+
+            log.debug('Edges query result:', { edgesData, edgesError });
+
+            if (edgesError) {
+                log.error('Failed to fetch edges:', edgesError);
+                throw new Error(`Failed to fetch edges: ${edgesError.message}`);
+            }
+
+            // Reconstruct MindMap entity
+            const nodes = (nodesData || []).map(node => ({
+                id: node.id,
+                isRoot: node.is_root,
+                content: node.content,
+                position: { x: node.position_x, y: node.position_y },
+                parentId: node.parent_id,
+                children: [], // will be filled by MindMap.fromJSON
+                createdAt: node.created_at,
+                updatedAt: node.updated_at,
+                metadata: {},
+                height: node.height,
+                width: node.width,
+                handleConfig: node.handle_config
+            }));
+            const edges = (edgesData || []).map(edge => ({
+                id: edge.id,
+                sourceNodeId: edge.source_node_id,
+                targetNodeId: edge.target_node_id,
+                type: edge.type,
+                sourceHandleId: edge.source_handle_id,
+                targetHandleId: edge.target_handle_id,
+                style: edge.style,
+                createdAt: edge.created_at,
+                updatedAt: edge.updated_at,
+                metadata: {}
+            }));
+            const mindMapJson = {
+                id: mindmapData.id,
+                title: mindmapData.title,
+                nodes,
+                edges,
+                rootNodeId: nodes.find(n => n.isRoot)?.id || null,
+                createdAt: mindmapData.created_at,
+                updatedAt: mindmapData.updated_at,
+                metadata: {}
+            };
+
+            log.debug('Reconstructed mind map:', mindMapJson);
+            return mindMapJson;
         } catch (error) {
+            log.error('loadMindMap error:', error);
             return rejectWithValue(error.message);
         }
     }
 );
+
+
 
 
 export const updateNode = createAsyncThunk(
@@ -77,6 +205,35 @@ export const updateNode = createAsyncThunk(
                 node.updateDimensions(updates.height, updates.width)
             }
 
+            // --- Supabase upsert node ---
+            try {
+                const nodeData = {
+                    id: node.id,
+                    mindmap_id: mindMap.currentMindMap.id,
+                    content: node.content,
+                    position_x: node.position.x,
+                    position_y: node.position.y,
+                    parent_id: node.parentId,
+                    is_root: node.isRoot,
+                    handle_config: node.handleConfig,
+                    width: node.width,
+                    height: node.height,
+                    created_at: node.createdAt.toISOString(),
+                    updated_at: new Date().toISOString()
+                };
+                log.debug('Upserting node data:', nodeData);
+                supabase.from('nodes').upsert(nodeData).then(({ error }) => {
+                    if (error) {
+                        log.error('Supabase node upsert error:', error);
+                        throw new Error(`Failed to upsert node: ${error.message}`);
+                    }
+                });
+            } catch (supabaseError) {
+                log.error('Supabase operation failed:', supabaseError);
+                throw supabaseError;
+            }
+            // ---
+
             return { node: node.toJSON(), mindMap: mindMap.currentMindMap.toJSON() };
         } catch (error) {
             return rejectWithValue(error.message);
@@ -97,6 +254,14 @@ export const deleteNode = createAsyncThunk(
             if (!success) {
                 throw new Error('Node not found');
             }
+
+            // --- Supabase delete node (edges will be deleted automatically via cascade) ---
+            supabase.from('nodes').delete().eq('id', nodeId).then(({ error }) => {
+                if (error) {
+                    log.error('Supabase node delete error:', error);
+                }
+            });
+            // ---
 
             return mindMap.currentMindMap.toJSON();
         } catch (error) {
@@ -121,6 +286,31 @@ export const connectNodes = createAsyncThunk(
             // Store handle information in the edge
             edge.setHandleIds(sourceHandleId, targetHandleId);
             mindMap.currentMindMap.addEdge(edge);
+
+            // --- Supabase upsert edge ---
+            try {
+                const edgeData = {
+                    id: edge.id,
+                    mindmap_id: mindMap.currentMindMap.id,
+                    source_node_id: edge.sourceNodeId,
+                    target_node_id: edge.targetNodeId,
+                    source_handle_id: edge.sourceHandleId,
+                    target_handle_id: edge.targetHandleId,
+                    type: edge.type,
+                    style: edge.style,
+                    created_at: edge.createdAt.toISOString(),
+                    updated_at: new Date().toISOString()
+                };
+                log.debug('Upserting edge data:', edgeData);
+                supabase.from('edges').upsert(edgeData).then(({ error }) => {
+                    if (error) {
+                        log.error('Supabase edge upsert error:', error);
+                    }
+                });
+            } catch (supabaseError) {
+                log.error('Supabase edge operation failed:', supabaseError);
+            }
+            // ---
 
             return { edge: edge.toJSON(), mindMap: mindMap.currentMindMap.toJSON() };
         } catch (error) {
@@ -162,6 +352,33 @@ export const addNodeWithConnection = createAsyncThunk(
             node.setHandleConfig(nodeHandleConfigs)
             mindMap.currentMindMap.addNode(node);
 
+            // --- Supabase upsert node ---
+            try {
+                const newNodeData = {
+                    id: node.id,
+                    mindmap_id: mindMap.currentMindMap.id,
+                    content: node.content,
+                    position_x: node.position.x,
+                    position_y: node.position.y,
+                    parent_id: node.parentId,
+                    is_root: node.isRoot,
+                    handle_config: node.handleConfig,
+                    width: node.width,
+                    height: node.height,
+                    created_at: node.createdAt.toISOString(),
+                    updated_at: new Date().toISOString()
+                };
+                log.debug('Upserting new node data:', newNodeData);
+                supabase.from('nodes').upsert(newNodeData).then(({ error }) => {
+                    if (error) {
+                        log.error('Supabase new node upsert error:', error);
+                    }
+                });
+            } catch (supabaseError) {
+                log.error('Supabase new node operation failed:', supabaseError);
+            }
+            // ---
+
             // Create the edge if sourceNodeId is provided
             let edge = null;
             if (sourceNodeId) {
@@ -169,6 +386,31 @@ export const addNodeWithConnection = createAsyncThunk(
                 // Store handle information in the edge
                 edge.setHandleIds(sourceHandleId, `${node.id}-target`);
                 mindMap.currentMindMap.addEdge(edge);
+
+                // --- Supabase upsert edge ---
+                try {
+                    const newEdgeData = {
+                        id: edge.id,
+                        mindmap_id: mindMap.currentMindMap.id,
+                        source_node_id: edge.sourceNodeId,
+                        target_node_id: edge.targetNodeId,
+                        source_handle_id: edge.sourceHandleId,
+                        target_handle_id: edge.targetHandleId,
+                        type: edge.type,
+                        style: edge.style,
+                        created_at: edge.createdAt.toISOString(),
+                        updated_at: new Date().toISOString()
+                    };
+                    log.debug('Upserting new edge data:', newEdgeData);
+                    supabase.from('edges').upsert(newEdgeData).then(({ error }) => {
+                        if (error) {
+                            log.error('Supabase new edge upsert error:', error);
+                        }
+                    });
+                } catch (supabaseError) {
+                    log.error('Supabase new edge operation failed:', supabaseError);
+                }
+                // ---
             }
 
             const data = {
@@ -197,6 +439,14 @@ export const deleteEdge = createAsyncThunk(
             if (!success) {
                 throw new Error('Edge not found');
             }
+
+            // --- Supabase delete edge ---
+            supabase.from('edges').delete().eq('id', edgeId).then(({ error }) => {
+                if (error) {
+                    log.error('Supabase edge delete error:', error);
+                }
+            });
+            // ---
 
             return mindMap.currentMindMap.toJSON();
         } catch (error) {
@@ -295,21 +545,6 @@ const mindMapSlice = createSlice({
                 state.error = action.payload;
             })
 
-            // Save MindMap
-            .addCase(saveMindMap.pending, (state) => {
-                state.loading = true;
-                state.error = null;
-            })
-            .addCase(saveMindMap.fulfilled, (state, action) => {
-                state.loading = false;
-                state.currentMindMap = action.payload ? MindMap.fromJSON(action.payload) : null;
-                state.hasUnsavedChanges = false;
-                state.lastSaved = new Date().toISOString();
-            })
-            .addCase(saveMindMap.rejected, (state, action) => {
-                state.loading = false;
-                state.error = action.payload;
-            })
 
 
             // Update Node

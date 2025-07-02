@@ -69,7 +69,7 @@ export class Node {
 
     // Factory method
     static create(isRoot = false, content, position = { x: 0, y: 0 }, parentId = null) {
-        const id = `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const id = crypto.randomUUID();
         return new Node(id, isRoot, content, position, parentId);
     }
 

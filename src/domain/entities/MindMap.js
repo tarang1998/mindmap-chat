@@ -164,7 +164,7 @@ export class MindMap {
 
     // Factory method
     static create(title = 'Untitled Mind Map') {
-        const id = `mindmap_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const id = crypto.randomUUID();
         return new MindMap(id, title);
     }
 
@@ -189,16 +189,32 @@ export class MindMap {
         mindMap.updatedAt = new Date(data.updatedAt);
         mindMap.metadata = data.metadata || {};
 
-        // Reconstruct nodes
-        data.nodes.forEach(nodeData => {
-            const node = Node.fromJSON(nodeData);
-            mindMap.nodes.set(node.id, node);
-        });
-
-        // Reconstruct edges
+        // First reconstruct edges to compute children data
         data.edges.forEach(edgeData => {
             const edge = Edge.fromJSON(edgeData);
             mindMap.edges.set(edge.id, edge);
+        });
+
+        // Compute children data from edges
+        const childrenMap = new Map(); // nodeId -> array of child nodeIds
+        mindMap.edges.forEach(edge => {
+            const sourceNodeId = edge.sourceNodeId;
+            const targetNodeId = edge.targetNodeId;
+
+            if (!childrenMap.has(sourceNodeId)) {
+                childrenMap.set(sourceNodeId, []);
+            }
+            childrenMap.get(sourceNodeId).push(targetNodeId);
+        });
+
+        // Reconstruct nodes with computed children data
+        data.nodes.forEach(nodeData => {
+            // Add computed children data to nodeData
+            const children = childrenMap.get(nodeData.id) || [];
+            const nodeWithChildren = { ...nodeData, children };
+
+            const node = Node.fromJSON(nodeWithChildren);
+            mindMap.nodes.set(node.id, node);
         });
 
         return mindMap;

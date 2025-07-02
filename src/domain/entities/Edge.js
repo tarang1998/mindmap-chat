@@ -59,7 +59,7 @@ export class Edge {
 
     // Factory method
     static create(sourceNodeId, targetNodeId, type = 'default') {
-        const id = `edge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const id = crypto.randomUUID();
         return new Edge(id, sourceNodeId, targetNodeId, type);
     }
 
