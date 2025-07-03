@@ -59,11 +59,11 @@ const MindMapContent = ({ mindMapId }) => {
     const edgeReconnectSuccessful = useRef(true);
 
     // Proximity connect constants
-    const MIN_DISTANCE = 300;
+    const MIN_DISTANCE = 400;
 
     // Memoize nodes and edges to prevent unnecessary re-renders
     const nodesFromRedux = useMemo(() => {
-        log.debug("ComputingnodesFromRedux")
+        log.debug("Computing nodesFromRedux")
         if (!currentMindMap) {
             return [];
         }
@@ -88,7 +88,7 @@ const MindMapContent = ({ mindMapId }) => {
 
 
     const edgesFromRedux = useMemo(() => {
-        log.debug("ComputingedgesFromRedux")
+        log.debug("Computing edgesFromRedux")
         if (!currentMindMap) {
             return [];
         }
@@ -115,6 +115,10 @@ const MindMapContent = ({ mindMapId }) => {
     useEffect(() => {
         setEdges(edgesFromRedux);
     }, [edgesFromRedux, setEdges]);
+
+    useEffect(() => {
+        setNodes(nodesFromRedux);
+    }, [nodesFromRedux, setEdges]);
 
 
 
@@ -449,7 +453,8 @@ const MindMapContent = ({ mindMapId }) => {
     }, [nodes, edges, dispatch]);
 
 
-    // Causes circular updates - can use useEffect to sync local state with Redux
+    // Could lead circular updates 
+    // Due to triggering of handleOnSelectionChange with empty array
     const handleOnSelectionChange = useCallback((obj) => {
         log.debug("handleOnSelectionChange", obj);
 
@@ -458,10 +463,6 @@ const MindMapContent = ({ mindMapId }) => {
             const selectedNode = obj.nodes[0]; // Only take the first node
             log.debug("handleOnSelectionChange", "Selected Node : ", selectedNode);
             dispatch(setSelectedNode(selectedNode.id));
-        } else {
-            // No nodes selected
-            log.debug("handleOnSelectionChange", "No nodes selected, clearing selection");
-            dispatch(clearSelection());
         }
     }, [dispatch]);
 
@@ -736,6 +737,7 @@ const MindMapContent = ({ mindMapId }) => {
         if (!edgeReconnectSuccessful.current) {
             // If reconnection was not successf
             dispatch(deleteEdge(edge.id));
+
         }
         edgeReconnectSuccessful.current = true;
     }, [dispatch, edges]);
