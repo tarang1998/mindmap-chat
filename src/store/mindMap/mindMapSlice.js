@@ -6,6 +6,78 @@ import log from "../../utils/logger.js"
 import { getIncomers, getOutgoers, getConnectedEdges } from '@xyflow/react';
 import { supabase } from '../../utils/supabase.js';
 
+
+export const fetchAllMindMaps = createAsyncThunk(
+    'mindMap/fetchAllMindMaps',
+    async (_, { rejectWithValue }) => {
+        try {
+            const { data, error } = await supabase.from('mindmaps').select('*').order('updated_at', { ascending: false });
+            if (error) {
+                return rejectWithValue(error.message);
+            }
+            return data || [];
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+export const updateMindMapTitle = createAsyncThunk(
+    'mindMap/updateMindMapTitle',
+    async ({ mindMapId, newTitle }, { rejectWithValue }) => {
+        try {
+            log.debug('Updating mindmap title:', { mindMapId, newTitle });
+
+            // Update in Supabase
+            const { data, error } = await supabase
+                .from('mindmaps')
+                .update({
+                    title: newTitle,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', mindMapId)
+                .select();
+
+            if (error) {
+                log.error('Supabase mindmap title update error:', error);
+                throw new Error(`Failed to update mindmap title: ${error.message}`);
+            }
+
+            log.debug('Mindmap title updated successfully:', data);
+            return { mindMapId, newTitle, updatedMindMap: data[0] };
+        } catch (error) {
+            log.error('updateMindMapTitle error:', error);
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+export const deleteMindMap = createAsyncThunk(
+    'mindMap/deleteMindMap',
+    async (mindMapId, { rejectWithValue }) => {
+        try {
+            log.debug('Deleting mindmap:', mindMapId);
+
+            // Delete from Supabase (nodes and edges will be deleted automatically via cascade)
+            const { error } = await supabase
+                .from('mindmaps')
+                .delete()
+                .eq('id', mindMapId);
+
+            if (error) {
+                log.error('Supabase mindmap delete error:', error);
+                throw new Error(`Failed to delete mindmap: ${error.message}`);
+            }
+
+            log.debug('Mindmap deleted successfully');
+            return mindMapId;
+        } catch (error) {
+            log.error('deleteMindMap error:', error);
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
 // Async thunks for API operations
 export const createMindMap = createAsyncThunk(
     'mindMap/createMindMap',
@@ -174,8 +246,6 @@ export const loadMindMap = createAsyncThunk(
 );
 
 
-
-
 export const updateNode = createAsyncThunk(
     'mindMap/updateNode',
     async ({ nodeId, updates }, { getState, rejectWithValue }) => {
@@ -269,8 +339,6 @@ export const deleteNode = createAsyncThunk(
         }
     }
 );
-
-
 
 export const connectNodes = createAsyncThunk(
     'mindMap/connectNodes',
@@ -425,7 +493,6 @@ export const addNodeWithConnection = createAsyncThunk(
     }
 );
 
-
 export const deleteEdge = createAsyncThunk(
     'mindMap/deleteEdge',
     async (edgeId, { getState, rejectWithValue }) => {
@@ -545,7 +612,65 @@ const mindMapSlice = createSlice({
                 state.error = action.payload;
             })
 
+            // Fetch All MindMaps
+            .addCase(fetchAllMindMaps.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(fetchAllMindMaps.fulfilled, (state, action) => {
+                state.loading = false;
+                state.mindMaps = action.payload;
+            })
+            .addCase(fetchAllMindMaps.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
 
+            // Update MindMap Title
+            .addCase(updateMindMapTitle.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(updateMindMapTitle.fulfilled, (state, action) => {
+                state.loading = false;
+                // Update the mindmap in the list
+                const { mindMapId, newTitle, updatedMindMap } = action.payload;
+                const mindMapIndex = state.mindMaps.findIndex(map => map.id === mindMapId);
+                if (mindMapIndex !== -1) {
+                    state.mindMaps[mindMapIndex] = updatedMindMap;
+                }
+                // Update current mindmap if it's the one being renamed
+                if (state.currentMindMap && state.currentMindMap.id === mindMapId) {
+                    state.currentMindMap.title = newTitle;
+                    state.currentMindMap.updatedAt = new Date();
+                }
+            })
+            .addCase(updateMindMapTitle.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+
+            // Delete MindMap
+            .addCase(deleteMindMap.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(deleteMindMap.fulfilled, (state, action) => {
+                state.loading = false;
+                const deletedMindMapId = action.payload;
+                // Remove the mindmap from the list
+                state.mindMaps = state.mindMaps.filter(map => map.id !== deletedMindMapId);
+                // Clear current mindmap if it's the one being deleted
+                if (state.currentMindMap && state.currentMindMap.id === deletedMindMapId) {
+                    state.currentMindMap = null;
+                    state.selectedNodeId = null;
+                    state.selectedEdgeId = null;
+                }
+            })
+            .addCase(deleteMindMap.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
 
             // Update Node
             .addCase(updateNode.pending, (state) => {
@@ -577,7 +702,6 @@ const mindMapSlice = createSlice({
                 state.loading = false;
                 state.error = action.payload;
             })
-
 
             // Connect Nodes
             .addCase(connectNodes.pending, (state) => {
@@ -612,7 +736,6 @@ const mindMapSlice = createSlice({
                 state.error = action.payload;
             })
 
-
             // Delete Edge
             .addCase(deleteEdge.fulfilled, (state, action) => {
                 state.loading = false;
@@ -637,5 +760,6 @@ export const {
     updateNodeContent,
     clearError
 } = mindMapSlice.actions;
+
 
 export default mindMapSlice.reducer; 
