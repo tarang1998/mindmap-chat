@@ -4,6 +4,8 @@ import { Container, Row, Col, Button, Card, Spinner, Dropdown } from 'react-boot
 import { useDispatch, useSelector } from 'react-redux';
 import { createMindMap, fetchAllMindMaps, updateMindMapTitle, deleteMindMap } from '../../../store/mindMap/mindMapSlice';
 import './projectDashboard.css';
+import Grid from '@mui/material/Grid';
+
 
 export default function ProjectDashboard() {
     const navigate = useNavigate();
@@ -184,9 +186,9 @@ export default function ProjectDashboard() {
                         </div>
                     </Row>
                 ) : (
-                    <Row className="dashboard-mindmap">
+                    <Grid container className="dashboard-mindmap">
                         {mindmaps.map(map => (
-                            <Col xs={12} sm={6} md={4} lg={3} key={map.id} className="mb-4">
+                            <Grid item xs={12} sm={6} md={4} lg={3} xl={3} key={map.id} style={{ padding: '12px' }}>
                                 <Card
                                     bg="dark"
                                     text="light"
@@ -225,9 +227,9 @@ export default function ProjectDashboard() {
                                         </div>
                                     </Card.Footer>
                                 </Card>
-                            </Col>
+                            </Grid>
                         ))}
-                    </Row>
+                    </Grid>
                 )}
             </div>
         </div>
