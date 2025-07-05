@@ -81,10 +81,10 @@ export const deleteMindMap = createAsyncThunk(
 // Async thunks for API operations
 export const createMindMap = createAsyncThunk(
     'mindMap/createMindMap',
-    async ({ id, initial }, { rejectWithValue }) => {
+    async ({ }, { rejectWithValue }) => {
         try {
             // Create a new mind map with the given id
-            const mindMap = new MindMap(id, 'Untitled Mind Map');
+            const mindMap = new MindMap(crypto.randomUUID(), 'Untitled Mind Map');
 
             const node = Node.create(true, 'Root', { x: 250, y: 100 }, null);
             node.setHandleConfig([

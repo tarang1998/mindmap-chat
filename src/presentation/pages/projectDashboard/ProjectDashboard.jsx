@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { createMindMap, fetchAllMindMaps, updateMindMapTitle, deleteMindMap } from '../../../store/mindMap/mindMapSlice';
 import './projectDashboard.css';
 import Grid from '@mui/material/Grid';
-
+import log from '../../../utils/logger'
 
 export default function ProjectDashboard() {
     const navigate = useNavigate();
@@ -18,22 +18,22 @@ export default function ProjectDashboard() {
     const [renameMindMapId, setRenameMindMapId] = useState(null);
     const [newName, setNewName] = useState('');
     const [renameLoading, setRenameLoading] = useState(false);
-    // Local state for create button
-    const [creating, setCreating] = useState(false);
+
+
 
     useEffect(() => {
         dispatch(fetchAllMindMaps());
     }, [dispatch]);
 
     const handleCreate = async () => {
-        setCreating(true);
         try {
+            log.debug("handleCreate", "Creating Mindmap")
             const result = await dispatch(createMindMap({}));
+
             if (result.payload && result.payload.id) {
                 navigate(`/mindmap/${result.payload.id}`);
             }
         } finally {
-            setCreating(false);
         }
     };
 
@@ -188,7 +188,11 @@ export default function ProjectDashboard() {
                 ) : (
                     <Grid container className="dashboard-mindmap">
                         {mindmaps.map(map => (
-                            <Grid item xs={12} sm={6} md={4} lg={3} xl={3} key={map.id} style={{ padding: '12px' }}>
+                            <Grid
+                                // item size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 3 }}
+                                xs={12} sm={6} md={4} lg={3} xl={3}
+                                key={map.id}
+                            >
                                 <Card
                                     bg="dark"
                                     text="light"
@@ -202,7 +206,7 @@ export default function ProjectDashboard() {
                                                 onClick={(e) => handleRename(e, map.id)}
                                                 title="Rename"
                                             >
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                                                     <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
                                                 </svg>
                                             </button>
@@ -211,7 +215,7 @@ export default function ProjectDashboard() {
                                                 onClick={(e) => handleDelete(e, map.id)}
                                                 title="Delete"
                                             >
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                                                     <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
                                                 </svg>
                                             </button>
