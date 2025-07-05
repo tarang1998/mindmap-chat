@@ -74,7 +74,9 @@
     border: 1px solid #707173;
     border-radius: 12px;
     min-height: 300px;
-    min-width: 340px;
+    min-width: 320px;
+
+    max-width: 340px;
     margin-right: 50px;
     margin-bottom: 50px;
     transition: box-shadow 0.2s, border-color 0.2s;
@@ -115,8 +117,7 @@
     border: none;
     border-radius: 50%;
     padding: 12px;
-    width: 44px;
-    height: 44px;
+
     display: flex;
     align-items: center;
     justify-content: center;
@@ -126,8 +127,8 @@
 }
 
 .dashboard-card-action-btn svg {
-    width: 35px;
-    height: 35px;
+    width: 25px;
+    height: 25px;
 }
 
 .dashboard-rename-btn:hover {
@@ -365,15 +366,9 @@
         padding: 6px 10px 0 0;
     }
 
-    .dashboard-card-action-btn {
-        width: 36px;
-        height: 36px;
-        padding: 9px;
-    }
-
     .dashboard-card-action-btn svg {
-        width: 30px;
-        height: 30px;
+        width: 25px;
+        height: 25px;
     }
 }
 
@@ -425,8 +420,7 @@
     }
 
     .dashboard-card-action-btn {
-        width: 28px;
-        height: 28px;
+
         padding: 6px;
     }
 
@@ -491,7 +485,7 @@
     }
 
     .dashboard-create-project-button {
-        font-size: 11px;
+        font-size: 15px;
         height: 40px;
         width: 140px;
         border-radius: 9px;
