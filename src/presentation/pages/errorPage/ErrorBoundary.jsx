@@ -1,7 +1,7 @@
 import React from 'react';
-import { useAppDispatch } from '../../hooks/hooks.js';
-import { addError } from '../../store/error/errorSlice.js';
+import { addError } from '../../../store/error/errorSlice.js';
 import './ErrorBoundary.css';
+import { useDispatch } from 'react-redux';
 
 class ErrorBoundary extends React.Component {
     constructor(props) {
@@ -69,7 +69,7 @@ class ErrorBoundary extends React.Component {
 
 // Wrapper component to provide dispatch
 export const ErrorBoundaryWrapper = ({ children }) => {
-    const dispatch = useAppDispatch();
+    const dispatch = useDispatch();
     return (
         <ErrorBoundary dispatch={dispatch}>
             {children}

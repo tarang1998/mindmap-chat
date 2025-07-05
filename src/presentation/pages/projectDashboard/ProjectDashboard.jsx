@@ -102,13 +102,16 @@ export default function ProjectDashboard() {
     };
 
     return (
-        <div style={{
-            paddingTop: "1px",
-            minHeight: '100vh',
-            background: '#23272f',
-            color: '#fff',
-            fontFamily: 'Inter, sans-serif'
-        }}>
+        <div
+            style={{
+                minHeight: '100vh',
+                background: '#23272f',
+                color: '#fff',
+                fontFamily: 'Inter, sans-serif',
+                margin: 0,
+                padding: 1
+            }}
+        >
             {/* Rename Popup */}
             {showRenamePopup && (
                 <div className="dashboard-rename-popup-overlay">
@@ -155,7 +158,8 @@ export default function ProjectDashboard() {
                 </div>
             )}
 
-            <Container className='dashboard-container'>
+
+            <div className='dashboard-container'>
                 <Row className="align-items-center mb-4">
                     <Col className="dashboard-title" xs={12}>
                         <h1>Welcome to Mind Mapping</h1>
@@ -225,7 +229,7 @@ export default function ProjectDashboard() {
                         ))}
                     </Row>
                 )}
-            </Container>
+            </div>
         </div>
     );
 } 

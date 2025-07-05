@@ -1,9 +1,9 @@
 import React, { useState, useRef, memo, useCallback, useEffect } from 'react';
 import { Handle, NodeResizeControl, NodeResizer, NodeToolbar, Position, useViewport, useReactFlow, getIncomers, getOutgoers, getConnectedEdges, useHandleConnections } from '@xyflow/react';
-import { useAppDispatch } from '../../hooks/hooks.js';
-import { updateNode, deleteNode, connectNodes, deleteEdge } from '../../store/mindMap/mindMapSlice.js';
+import { updateNode, deleteNode, connectNodes, deleteEdge } from '../../../store/mindMap/mindMapSlice.js';
 import "./CustomNode.css"
-import log from "../../utils/logger.js"
+import log from "../../../utils/logger.js"
+import { useDispatch } from 'react-redux';
 
 const CustomNode = memo(({ id, selected, data }) => {
     const [isEditing, setIsEditing] = useState(false);
@@ -15,7 +15,7 @@ const CustomNode = memo(({ id, selected, data }) => {
     });
     const inputRef = useRef(null);
     const resizeTimeoutRef = useRef(null);
-    const dispatch = useAppDispatch();
+    const dispatch = useDispatch();
     const { zoom } = useViewport();
     const { getNodes, getEdges } = useReactFlow();
 

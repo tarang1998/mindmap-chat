@@ -17,7 +17,6 @@ import {
     useStoreApi,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { useAppSelector, useAppDispatch } from '../../hooks/hooks.js';
 import {
     createMindMap,
     loadMindMap,
@@ -30,26 +29,26 @@ import {
     setSelectedNode,
     clearSelection
 
-} from '../../store/mindMap/mindMapSlice.js';
+} from '../../../store/mindMap/mindMapSlice.js';
 import {
     setZoom,
     setPan,
     resetView,
     openModal
-} from '../../store/ui/uiSlice.js';
-import CustomNode from '../components/CustomNode.jsx';
+} from '../../../store/ui/uiSlice.js';
+import CustomNode from '../../components/customNodes/CustomNode.jsx';
 import './MindMapPage.css';
 import { useParams } from 'react-router-dom';
-import log from "../../utils/logger.js"
+import log from "../../../utils/logger.js"
 
 
 const MindMapContent = ({ mindMapId }) => {
     log.debug("MindMapContent rendered");
-    const dispatch = useAppDispatch();
+    const dispatch = useDispatch();
     const store = useStoreApi();
 
-    const { currentMindMap, selectedNodeId, loading, error } = useAppSelector(state => state.mindMap);
-    const { zoom, pan } = useAppSelector(state => state.ui);
+    const { currentMindMap, selectedNodeId, loading, error } = useSelector(state => state.mindMap);
+    const { zoom, pan } = useSelector(state => state.ui);
 
     const reactFlowWrapper = useRef(null);
     const viewportUpdateTimeoutRef = useRef(null);
@@ -815,11 +814,11 @@ const MindMapContent = ({ mindMapId }) => {
 
 const MindMapPage = () => {
 
-    const dispatch = useAppDispatch();
+    const dispatch = useDispatch();
 
     // Get mindMapId from URL params
     const { mindMapId } = useParams();
-    const { loading, error } = useAppSelector(s => s.mindMap);
+    const { loading, error } = useDispatch(s => s.mindMap);
 
     // Runs immediately after React has rendered
     // and then again any time the dependencies change - minMapId
