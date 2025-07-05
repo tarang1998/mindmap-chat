@@ -827,8 +827,12 @@ const MindMapPage = () => {
         dispatch(loadMindMap(mindMapId))
             .then(result => {
                 if (!result.payload) {
-                    dispatch(createMindMap({ id: mindMapId }));
+                    throw new Error(`Mind map with ID "${mindMapId}" not found. Please check the URL and try again.`);
                 }
+            })
+            .catch(error => {
+                log.error('Error loading mind map:', error);
+                // The error will be handled by the error state in the Redux store
             });
     }, [mindMapId, dispatch]);
 
