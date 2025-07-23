@@ -1,0 +1,127 @@
+.dashboard-delete-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.dashboard-delete-popup {
+    background: #2a2e35;
+    border-radius: 12px;
+    padding: 24px;
+    width: 400px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+.dashboard-delete-popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.dashboard-delete-popup-header h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.dashboard-delete-popup-close {
+    background: transparent;
+    border: none;
+    color: #aaa;
+    padding: 4px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.dashboard-delete-popup-close:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.dashboard-delete-popup-content {
+    margin-bottom: 24px;
+    color: #fff;
+    font-size: 16px;
+}
+
+.dashboard-delete-popup-content strong {
+    color: #ff6b6b;
+    font-weight: 600;
+}
+
+.dashboard-delete-popup-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.dashboard-delete-btn-cancel {
+    background: transparent;
+    border: 1px solid #aaa;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.dashboard-delete-btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #fff;
+}
+
+.dashboard-delete-btn-confirm {
+    background: #ff6b6b;
+    border: none;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.dashboard-delete-btn-confirm:hover {
+    background: #ff5252;
+    transform: translateY(-1px);
+}
+
+.dashboard-delete-btn-confirm:disabled,
+.dashboard-delete-btn-cancel:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+
+@media (max-width: 500px) {
+    .dashboard-delete-popup {
+        width: 250px;
+        padding: 16px;
+    }
+
+    .dashboard-delete-popup-header h3 {
+        font-size: 18px;
+    }
+
+    .dashboard-delete-popup-content {
+        font-size: 14px;
+    }
+
+    .dashboard-delete-btn-cancel,
+    .dashboard-delete-btn-confirm {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+}

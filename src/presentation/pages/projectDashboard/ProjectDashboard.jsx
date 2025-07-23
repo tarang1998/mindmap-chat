@@ -4,6 +4,7 @@ import { Container, Row, Col, Button, Card, Spinner, Dropdown } from 'react-boot
 import { useDispatch, useSelector } from 'react-redux';
 import { createMindMap, fetchAllMindMaps, updateMindMapTitle, deleteMindMap } from '../../../store/mindMap/mindMapSlice';
 import './projectDashboard.css';
+import './deletePopup.css';
 import Grid from '@mui/material/Grid';
 import log from '../../../utils/logger'
 
@@ -18,6 +19,9 @@ export default function ProjectDashboard() {
     const [renameMindMapId, setRenameMindMapId] = useState(null);
     const [newName, setNewName] = useState('');
     const [renameLoading, setRenameLoading] = useState(false);
+    const [showDeletePopup, setShowDeletePopup] = useState(false);
+    const [deleteMapId, setDeleteMapId] = useState(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
 
 
 
@@ -51,24 +55,32 @@ export default function ProjectDashboard() {
 
     const handleDelete = (e, id) => {
         e.stopPropagation();
-        const mindmap = mindmaps.find(map => map.id === id);
-        const mindmapName = mindmap?.title || 'this project';
+        setDeleteMapId(id);
+        setShowDeletePopup(true);
+    };
 
-        if (window.confirm(`Are you sure you want to delete "${mindmapName}"? This action cannot be undone.`)) {
-            dispatch(deleteMindMap(id))
-                .then((result) => {
-                    if (result.error) {
-                        console.error('Error deleting mindmap:', result.error);
-                        alert('Failed to delete project. Please try again.');
-                    } else {
-                        console.log('Mindmap deleted successfully');
-                    }
-                })
-                .catch((error) => {
-                    console.error('Error deleting mindmap:', error);
-                    alert('Failed to delete project. Please try again.');
-                });
+    const handleDeleteConfirm = async () => {
+        if (!deleteMapId) return;
+        
+        setDeleteLoading(true);
+        try {
+            const result = await dispatch(deleteMindMap(deleteMapId));
+            if (result.error) {
+                throw new Error(result.error);
+            }
+            setShowDeletePopup(false);
+            setDeleteMapId(null);
+        } catch (error) {
+            console.error('Error deleting mindmap:', error);
+            alert('Failed to delete project. Please try again.');
+        } finally {
+            setDeleteLoading(false);
         }
+    };
+
+    const handleDeleteCancel = () => {
+        setShowDeletePopup(false);
+        setDeleteMapId(null);
     };
 
     const handleRenameSubmit = async () => {
@@ -160,6 +172,45 @@ export default function ProjectDashboard() {
                 </div>
             )}
 
+            {/* Delete Popup */}
+            {showDeletePopup && (
+                <div className="dashboard-delete-popup-overlay">
+                    <div className="dashboard-delete-popup">
+                        <div className="dashboard-delete-popup-header">
+                            <h3>Delete Project</h3>
+                            <button
+                                className="dashboard-delete-popup-close"
+                                onClick={handleDeleteCancel}
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div className="dashboard-delete-popup-content">
+                            Are you sure you want to delete <strong>{mindmaps.find(m => m.id === deleteMapId)?.title || 'this project'}</strong>?
+                            <br />
+                            This action cannot be undone.
+                        </div>
+                        <div className="dashboard-delete-popup-actions">
+                            <button
+                                className="dashboard-delete-btn-cancel"
+                                onClick={handleDeleteCancel}
+                                disabled={deleteLoading}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="dashboard-delete-btn-confirm"
+                                onClick={handleDeleteConfirm}
+                                disabled={deleteLoading}
+                            >
+                                {deleteLoading ? 'Deleting...' : 'Delete'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className='dashboard-container'>
                 <Row className="align-items-center mb-4">
