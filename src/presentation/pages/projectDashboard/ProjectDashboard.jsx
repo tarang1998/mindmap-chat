@@ -6,6 +6,7 @@ import { createMindMap, fetchAllMindMaps, updateMindMapTitle, deleteMindMap } fr
 import './projectDashboard.css';
 import './deletePopup.css';
 import './renamePopup.css';
+import './createProject.css';
 import Grid from '@mui/material/Grid';
 import log from '../../../utils/logger'
 

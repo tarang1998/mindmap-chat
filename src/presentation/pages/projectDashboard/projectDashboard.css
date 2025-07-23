@@ -17,48 +17,6 @@
     margin-top: 30px;
 }
 
-.dashboard-create-project-button {
-    font-weight: 500;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 18px;
-    height: 56px;
-    width: 190px;
-    border-radius: 18px;
-    padding: 8px 22px;
-    cursor: pointer;
-    white-space: nowrap;
-    overflow: hidden;
-    text-align: center;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(90deg, #4f8cff 0%, #6fc3ff 100%);
-    color: #fff;
-    border: none;
-    box-shadow: 0 2px 8px rgba(79, 140, 255, 0.10);
-    transition:
-        background 0.2s,
-        color 0.2s,
-        box-shadow 0.2s,
-        transform 0.15s;
-    outline: none;
-    position: relative;
-}
-
-.dashboard-create-project-button:hover,
-.dashboard-create-project-button:focus {
-    background: linear-gradient(90deg, #357ae8 0%, #4f8cff 100%);
-    color: #fff;
-    box-shadow: 0 4px 16px rgba(79, 140, 255, 0.18);
-    transform: scale(1.05);
-}
-
-.dashboard-create-project-button:active {
-    background: linear-gradient(90deg, #2851a3 0%, #357ae8 100%);
-    color: #e0eaff;
-    transform: scale(0.98);
-    box-shadow: 0 2px 8px rgba(79, 140, 255, 0.10);
-}
-
 .dashboard-loading {
     margin-top: 50px;
 }
@@ -220,13 +178,7 @@
         margin-top: 8px;
     }
 
-    .dashboard-create-project-button {
-        font-size: 18px;
-        height: 56px;
-        width: 190px;
-        border-radius: 24px;
-        padding: 14px 36px;
-    }
+
 
     .dashboard-mindmap {
         margin-top: 60px;
@@ -264,13 +216,6 @@
         margin-top: 4px;
     }
 
-    .dashboard-create-project-button {
-        font-size: 17px;
-        height: 56px;
-        width: 190px;
-        border-radius: 22px;
-        padding: 12px 30px;
-    }
 
     .dashboard-mindmap {
         margin-top: 50px;
@@ -326,15 +271,6 @@
 
     .dashboard-create-project {
         margin-top: 2px;
-    }
-
-    .dashboard-create-project-button {
-        font-size: 15px;
-        height: 40px;
-        width: 140px;
-        border-radius: 9px;
-        padding: 1px 2px;
-
     }
 
     .dashboard-mindmap-card{
