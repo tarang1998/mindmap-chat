@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { createMindMap, fetchAllMindMaps, updateMindMapTitle, deleteMindMap } from '../../../store/mindMap/mindMapSlice';
 import './projectDashboard.css';
 import './deletePopup.css';
+import './renamePopup.css';
 import Grid from '@mui/material/Grid';
 import log from '../../../utils/logger'
 
@@ -146,7 +147,7 @@ export default function ProjectDashboard() {
                                 type="text"
                                 value={newName}
                                 onChange={(e) => setNewName(e.target.value)}
-                                onKeyDown={handleKeyPress}
+                                // onKeyDown={handleKeyPress}
                                 placeholder="Enter new name..."
                                 className="dashboard-rename-input"
                                 autoFocus
