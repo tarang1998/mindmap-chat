@@ -107,7 +107,7 @@
 
 @media (max-width: 500px) {
     .dashboard-delete-popup {
-        width: 250px;
+        width: 70%;
         padding: 16px;
     }
 

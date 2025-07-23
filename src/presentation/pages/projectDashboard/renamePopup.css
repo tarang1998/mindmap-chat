@@ -117,3 +117,32 @@
     cursor: not-allowed;
     transform: none;
 }
+
+
+@media (max-width: 500px) {
+    .dashboard-rename-popup {
+        width: 70%;
+        padding: 16px;
+    }
+
+
+
+    .dashboard-rename-popup-header h3 {
+        font-size: 18px;
+    }
+
+    .dashboard-rename-input {
+        width: 90%;
+    }
+
+    .dashboard-rename-popup-content {
+        font-size: 14px;
+    }
+
+   
+    .dashboard-rename-btn-cancel,
+    .dashboard-rename-btn-confirm {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+}

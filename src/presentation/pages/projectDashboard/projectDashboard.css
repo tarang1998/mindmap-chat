@@ -306,42 +306,7 @@
         height: 25px;
     }
 
-    .dashboard-rename-popup-overlay {
-        padding-top: 60px;
-    }
 
-    .dashboard-rename-popup {
-        width: 95%;
-        max-width: 320px;
-    }
-
-    .dashboard-rename-popup-header {
-        padding: 14px 16px 10px 16px;
-    }
-
-    .dashboard-rename-popup-header h3 {
-        font-size: 15px;
-    }
-
-    .dashboard-rename-popup-content {
-        padding: 14px 16px;
-    }
-
-    .dashboard-rename-input {
-        padding: 10px 14px;
-        font-size: 13px;
-    }
-
-    .dashboard-rename-popup-actions {
-        padding: 10px 16px 14px 16px;
-        gap: 8px;
-    }
-
-    .dashboard-rename-btn-cancel,
-    .dashboard-rename-btn-save {
-        padding: 8px 14px;
-        font-size: 12px;
-    }
 
 
 }
@@ -394,40 +359,5 @@
         height: 20px;
     } */
 
-    .dashboard-rename-popup-overlay {
-        padding-top: 40px;
-    }
 
-    .dashboard-rename-popup {
-        width: 98%;
-        max-width: 280px;
-    }
-
-    .dashboard-rename-popup-header {
-        padding: 12px 14px 8px 14px;
-    }
-
-    .dashboard-rename-popup-header h3 {
-        font-size: 14px;
-    }
-
-    .dashboard-rename-popup-content {
-        padding: 12px 14px;
-    }
-
-    .dashboard-rename-input {
-        padding: 8px 12px;
-        font-size: 12px;
-    }
-
-    .dashboard-rename-popup-actions {
-        padding: 8px 14px 12px 14px;
-        gap: 6px;
-    }
-
-    .dashboard-rename-btn-cancel,
-    .dashboard-rename-btn-save {
-        padding: 6px 12px;
-        font-size: 11px;
-    }
 }
