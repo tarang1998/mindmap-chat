@@ -1,0 +1,52 @@
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    margin-bottom: 40px;
+}
+
+.dashboard-logo-container {
+    display: flex;
+    align-items: center;
+}
+
+.dashboard-logo {
+    width: 50px;
+    height: 50px;
+}
+
+.dashboard-signout-button {
+    font-weight: 500;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 16px;
+    height: 44px;
+    padding: 8px 22px;
+    border-radius: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
+}
+
+.dashboard-signout-button:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.dashboard-signout-button:active {
+    transform: translateY(1px);
+}
+
+.dashboard-signout-button svg {
+    width: 18px;
+    height: 18px;
+    opacity: 0.8;
+}

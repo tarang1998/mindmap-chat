@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Button, Card, Spinner, Dropdown } from 'react-bootstrap';
 import { useDispatch, useSelector } from 'react-redux';
 import { createMindMap, fetchAllMindMaps, updateMindMapTitle, deleteMindMap } from '../../../store/mindMap/mindMapSlice';
+import { signOut } from '../../../store/auth/authSlice';
+import BrainLogo from '../../../utils/brainmage';
 import './projectDashboard.css';
 import './deletePopup.css';
 import './renamePopup.css';
 import './createProject.css';
+import './header.css';
 import Grid from '@mui/material/Grid';
 import log from '../../../utils/logger'
 
@@ -213,7 +216,26 @@ export default function ProjectDashboard() {
                     </div>
                 </div>
             )}
-
+            <div className="dashboard-header">
+                    <div className="dashboard-logo-container">
+                        <BrainLogo width={100} height={100} className="dashboard-logo" />
+                    </div>
+                    <button
+                        className="dashboard-signout-button"
+                        onClick={() => {
+                            dispatch(signOut()).then(() => {
+                                navigate('/login');
+                            });
+                        }}
+                    >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                            <polyline points="16 17 21 12 16 7" />
+                            <line x1="21" y1="12" x2="9" y2="12" />
+                        </svg>
+                        Sign Out
+                    </button>
+            </div>
             <div className='dashboard-container'>
                 <Row className="align-items-center mb-4">
                     <Col className="dashboard-title" xs={12}>
