@@ -3,10 +3,10 @@ import { persistStore, persistReducer, createTransform } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 import { combineReducers } from 'redux';
 import { MindMap } from '../domain/entities/MindMap.js';
-
 import mindMapReducer from '../store/mindMap/mindMapSlice.js';
 import uiReducer from '../store/ui/uiSlice.js';
 import errorReducer from '../store/error/errorSlice.js';
+import authReducer from '../store/auth/authSlice.js';
 import { createLogger } from 'redux-logger';
 
 
@@ -48,7 +48,8 @@ const persistConfig = {
 const rootReducer = combineReducers({
   mindMap: mindMapReducer,
   ui: uiReducer,
-  error: errorReducer
+  error: errorReducer,
+  auth: authReducer
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
