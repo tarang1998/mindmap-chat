@@ -114,7 +114,8 @@ export const createMindMap = createAsyncThunk(
                     title: mindMap.title,
                     user_id: userId,
                     created_at: mindMap.createdAt.toISOString(),
-                    updated_at: new Date().toISOString()
+                    updated_at: new Date().toISOString(),
+                    visibility: "PRIVATE",
                 };
                 log.debug('Upserting mindmap data:', mindmapData);
                 const { error } = await supabase.from('mindmaps').upsert(mindmapData);
@@ -219,6 +220,14 @@ export const loadMindMap = createAsyncThunk(
                 log.error('Failed to fetch edges:', edgesError);
                 throw new Error(`Failed to fetch edges: ${edgesError.message}`);
             }
+
+            await supabase
+                .from('mindmaps')
+                .update({
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', mindMapId)
+                .select();
 
             // Reconstruct MindMap entity
             const nodes = (nodesData || []).map(node => ({

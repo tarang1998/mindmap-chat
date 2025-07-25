@@ -47,6 +47,7 @@ export default function ProjectDashboard() {
     };
 
     const handleOpen = (id) => {
+        log.debug("handleOpen", `Opening Mindmap with ID: ${id}`);
         navigate(`/mindmap/${id}`);
     };
 
@@ -430,7 +431,7 @@ export default function ProjectDashboard() {
                                             width: '100%'
                                         }} title={map.title}>{map.title}</div>
                                         <div style={{ fontSize: 14, color: '#aaa', marginBottom: 2 }}>
-                                            Last updated: {map.updated_at ? new Date(map.updated_at).toLocaleDateString() : 'N/A'}
+                                            {map.created_at ? new Date(map.created_at).toLocaleDateString() : 'N/A'}
                                         </div>
                                     </Card.Footer>
                                 </Card>

@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useMemo, useCallback, us } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import React, { useEffect, useRef, useMemo, useCallback, useState } from 'react';
+import { useSelector, useDispatch,  } from 'react-redux';
 import {
     ReactFlow,
     MiniMap,
@@ -40,6 +40,8 @@ import CustomNode from '../../components/customNodes/CustomNode.jsx';
 import './MindMapPage.css';
 import { useParams } from 'react-router-dom';
 import log from "../../../utils/logger.js"
+import LoadingPage from '../loadingPage/LoadingPage';
+import ErrorPage from '../errorPage/ErrorPage';
 
 
 const MindMapContent = ({ mindMapId }) => {
@@ -817,33 +819,33 @@ const MindMapPage = () => {
     const dispatch = useDispatch();
 
     // Get mindMapId from URL params
-    const { mindMapId } = useParams();
-    const { loading, error } = useDispatch(s => s.mindMap);
+    const { id } = useParams();
+    const { loading , error } = useSelector(state => state.mindMap);
+    const [isInitializing, setIsInitializing] = useState(true);
+    
+    if (!id) throw new Error("Mind map ID is required");
 
-    // Runs immediately after React has rendered
-    // and then again any time the dependencies change - minMapId
     useEffect(() => {
-        if (!mindMapId) return;
-        dispatch(loadMindMap(mindMapId))
-            .then(result => {
-                if (!result.payload) {
-                    throw new Error(`Mind map with ID "${mindMapId}" not found. Please check the URL and try again.`);
-                }
-            })
-            .catch(error => {
-                log.error('Error loading mind map:', error);
-                // The error will be handled by the error state in the Redux store
-            });
-    }, [mindMapId, dispatch]);
+         dispatch(loadMindMap(id))
+        .then(result => {
+            log.debug(result)
+            if (!result.payload) {
+                throw new Error(`Mind map with ID "${id}" not found. Please check the URL and try again.`);
+            }
+            setIsInitializing(false)
+        })
+        .catch(error => {
+            log.error('Error loading mind map:', error);
+    });
+    }, [dispatch]);
+   
 
-    if (loading) {
-        // Use a proper loading view
-        return <div className="loader">Loading your mind-map…</div>;
+    if (isInitializing) {
+        return <LoadingPage message="Loading your mind map..." />;
     }
 
     if (error) {
-        // Use a proper error view 
-        return <div className="error">Oops: {error}</div>;
+        return <ErrorPage message={error} />;
     }
 
 
@@ -852,7 +854,7 @@ const MindMapPage = () => {
         // internal state outside of the ReactFlow component.
         // It provides context and state to everything inside, making the mind map interactive
         <ReactFlowProvider>
-            <MindMapContent mindMapId={mindMapId} />
+            <MindMapContent mindMapId={id} />
         </ReactFlowProvider>
     );
 };
