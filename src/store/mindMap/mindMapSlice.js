@@ -9,9 +9,19 @@ import { supabase } from '../../utils/supabase.js';
 
 export const fetchAllMindMaps = createAsyncThunk(
     'mindMap/fetchAllMindMaps',
-    async (_, { rejectWithValue }) => {
+    async (_, { rejectWithValue, getState }) => {
         try {
-            const { data, error } = await supabase.from('mindmaps').select('*').order('updated_at', { ascending: false });
+            const userId = getState().auth.user?.id;
+            if (!userId) {
+                throw new Error('User not authenticated');
+            }
+
+            const { data, error } = await supabase
+                .from('mindmaps')
+                .select('*')
+                .eq('user_id', userId)
+                .order('updated_at', { ascending: false });
+
             if (error) {
                 return rejectWithValue(error.message);
             }
@@ -81,8 +91,13 @@ export const deleteMindMap = createAsyncThunk(
 // Async thunks for API operations
 export const createMindMap = createAsyncThunk(
     'mindMap/createMindMap',
-    async ({ }, { rejectWithValue }) => {
+    async ({ }, { rejectWithValue, getState }) => {
         try {
+            const userId = getState().auth.user?.id;
+            if (!userId) {
+                throw new Error('User not authenticated');
+            }
+
             // Create a new mind map with the given id
             const mindMap = new MindMap(crypto.randomUUID(), 'Untitled Mind Map');
 
@@ -97,6 +112,7 @@ export const createMindMap = createAsyncThunk(
                 const mindmapData = {
                     id: mindMap.id,
                     title: mindMap.title,
+                    user_id: userId,
                     created_at: mindMap.createdAt.toISOString(),
                     updated_at: new Date().toISOString()
                 };
@@ -149,8 +165,13 @@ export const createMindMap = createAsyncThunk(
 
 export const loadMindMap = createAsyncThunk(
     'mindMap/loadMindMap',
-    async (mindMapId, { rejectWithValue }) => {
+    async (mindMapId, { rejectWithValue, getState }) => {
         try {
+            const userId = getState().auth.user?.id;
+            if (!userId) {
+                throw new Error('User not authenticated');
+            }
+
             log.debug('Loading mind map with ID:', mindMapId);
 
             // Fetch mindmap
@@ -158,6 +179,7 @@ export const loadMindMap = createAsyncThunk(
                 .from('mindmaps')
                 .select('*')
                 .eq('id', mindMapId)
+                .eq('user_id', userId)
                 .single();
 
             log.debug('Mindmap query result:', { mindmapData, mindmapError });

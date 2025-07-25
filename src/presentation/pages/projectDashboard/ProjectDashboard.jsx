@@ -424,7 +424,7 @@ export default function ProjectDashboard() {
                                             fontSize: 22, 
                                             fontWeight: 600, 
                                             color: '#fff',
-                                            whiteSpace: 'nowrap',
+                                            // whiteSpace: 'nowrap',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
                                             width: '100%'
