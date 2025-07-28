@@ -2,7 +2,7 @@ import { Node } from './Node.js';
 import { Edge } from './Edge.js';
 
 export class MindMap {
-    constructor(id, title = 'Untitled Mind Map') {
+    constructor(id, title = 'Untitled Project', visibility = 'private') {
         this.id = id;
         this.title = title;
         this.nodes = new Map(); // id -> Node
@@ -10,6 +10,7 @@ export class MindMap {
         this.rootNodeId = null;
         this.createdAt = new Date();
         this.updatedAt = new Date();
+        this.visibility = visibility;
         this.metadata = {};
     }
 

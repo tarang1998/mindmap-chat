@@ -826,18 +826,20 @@ const MindMapPage = () => {
     if (!id) throw new Error("Mind map ID is required");
 
     useEffect(() => {
-         dispatch(loadMindMap(id))
-        .then(result => {
-            log.debug(result)
-            if (!result.payload) {
-                throw new Error(`Mind map with ID "${id}" not found. Please check the URL and try again.`);
-            }
-            setIsInitializing(false)
-        })
-        .catch(error => {
-            log.error('Error loading mind map:', error);
-    });
-    }, [dispatch]);
+        dispatch(loadMindMap(id))
+            .unwrap()
+            .then(result => {
+                log.debug(result);
+                if (!result) {
+                    throw new Error(`Mind map with ID "${id}" not found. Please check the URL and try again.`);
+                }
+                setIsInitializing(false);
+            })
+            .catch(error => {
+                log.error('Error loading mind map:', error);
+                setIsInitializing(false);
+            });
+    }, [dispatch, id]);
    
 
     if (isInitializing) {

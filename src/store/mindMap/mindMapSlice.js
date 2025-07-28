@@ -169,19 +169,28 @@ export const loadMindMap = createAsyncThunk(
     async (mindMapId, { rejectWithValue, getState }) => {
         try {
             const userId = getState().auth.user?.id;
-            if (!userId) {
-                throw new Error('User not authenticated');
-            }
-
             log.debug('Loading mind map with ID:', mindMapId);
 
-            // Fetch mindmap
+            // Fetch mindmap without user_id restriction
             const { data: mindmapData, error: mindmapError } = await supabase
                 .from('mindmaps')
                 .select('*')
                 .eq('id', mindMapId)
-                .eq('user_id', userId)
                 .single();
+
+            if (mindmapError) {
+                log.error('Failed to fetch mind map:', mindmapError);
+                throw new Error(`Failed to fetch mind map: ${mindmapError.message}`);
+            }
+
+            if (!mindmapData) {
+                throw new Error('Mind map not found');
+            }
+
+            // Check visibility and access permissions
+            if (mindmapData.visibility === 'PRIVATE' && (!userId || userId !== mindmapData.user_id)) {
+                throw new Error('You do not have access to view this project');
+            }
 
             log.debug('Mindmap query result:', { mindmapData, mindmapError });
 

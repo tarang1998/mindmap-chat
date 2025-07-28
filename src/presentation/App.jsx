@@ -43,11 +43,7 @@ const App = () => {
                             />
                             <Route 
                                 path="/mindmap/:id" 
-                                element={
-                                    <ProtectedRoute>
-                                        <MindMapPage />
-                                    </ProtectedRoute>
-                                } 
+                                element={<MindMapPage />}
                             />
                         </Routes>
                     </BrowserRouter>
