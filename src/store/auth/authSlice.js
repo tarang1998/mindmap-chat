@@ -2,6 +2,34 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { supabase } from '../../utils/supabase';
 import log from '../../utils/logger';
 
+
+export const initializeAuthListener = createAsyncThunk(
+    'auth/initializeAuthListener',
+    async (_, { dispatch }) => {
+        // Get initial session
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+            log.error('Error getting initial session:', error);
+            throw error;
+        }
+
+        // Set up auth state change listener
+        supabase.auth.onAuthStateChange((event, newSession) => {
+            log.debug('Auth state changed:', { event, session: newSession });
+            
+            if (event === 'SIGNED_IN') {
+                dispatch(setSession(newSession));
+            } else if (event === 'SIGNED_OUT') {
+                dispatch(clearSession());
+            } else if (event === 'TOKEN_REFRESHED') {
+                dispatch(setSession(newSession));
+            }
+        });
+
+        return session;
+    }
+);
+
 export const signInWithOTP = createAsyncThunk(
     'auth/signInWithOTP',
     async ({ email }, { rejectWithValue }) => {
@@ -167,7 +195,9 @@ const authSlice = createSlice({
         checkingAuth: true,
         magicLinkSent: false,
         otpEmail: null, // For OTP sign-in flow
-        magicLinkSent: false
+        magicLinkSent: false,
+        session: null
+
     },
     reducers: {
         clearError: (state) => {
@@ -175,10 +205,38 @@ const authSlice = createSlice({
         },
         setMagicLinkSent: (state, action) => {
             state.magicLinkSent = action.payload;
+        },
+        setSession: (state, action) => {
+            state.session = action.payload;
+            state.user = action.payload?.user || null;
+            state.isAuthenticated = !!action.payload?.user;
+            state.error = null;
+        },
+        clearSession: (state) => {
+            state.session = null;
+            state.user = null;
+            state.isAuthenticated = false;
+            state.error = null;
         }
     },
     extraReducers: (builder) => {
         builder
+            // Initialize Auth Listener
+            .addCase(initializeAuthListener.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(initializeAuthListener.fulfilled, (state, action) => {
+                state.loading = false;
+                state.session = action.payload;
+                state.user = action.payload?.user || null;
+                state.isAuthenticated = !!action.payload?.user;
+            })
+            .addCase(initializeAuthListener.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+
             // Check Auth State
             .addCase(checkAuthState.pending, (state) => {
                 state.checkingAuth = true;
@@ -187,6 +245,7 @@ const authSlice = createSlice({
             .addCase(checkAuthState.fulfilled, (state, action) => {
                 state.checkingAuth = false;
                 state.isAuthenticated = !!action.payload;
+                state.session = action.payload;
                 state.user = action.payload?.user || null;
                 state.loading = false
             })
@@ -288,5 +347,5 @@ const authSlice = createSlice({
     }
 });
 
-export const { clearError, setMagicLinkSent } = authSlice.actions;
+export const { clearError, setMagicLinkSent, setSession, clearSession } = authSlice.actions;
 export default authSlice.reducer;
